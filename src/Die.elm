@@ -1,7 +1,6 @@
 module Die exposing (..)
 
 import Array exposing (Array)
-import Dict
 import Random
 
 

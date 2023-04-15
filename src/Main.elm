@@ -1,6 +1,6 @@
 module Main exposing (..)
 
-import Board exposing (Board, Grid, undoLastSelection)
+import Board exposing (Board, Grid)
 import Browser exposing (Document)
 import Cell exposing (Cell(..), XY)
 import Color
@@ -12,8 +12,11 @@ import Element.Border as Border
 import Element.Events as Events exposing (onClick)
 import Element.Font as Font
 import Element.Input as Input
+import Http
 import List.Extra as LEx
 import Random
+import RemoteData exposing (RemoteData(..), WebData)
+import Words exposing (Words)
 
 
 main : Program () Model Msg
@@ -55,31 +58,25 @@ type alias GameState =
     , selections : Selections
     , submissions : Submissions
     , rounds : Rounds
+    , dictionary : Words
     }
 
 
-initGameState : Board -> GameState
-initGameState board =
+initGameState : Words -> Board -> GameState
+initGameState words board =
     { board = board
     , selections = []
     , submissions = []
     , rounds = []
+    , dictionary = words
     }
 
 
-type alias DieToShuffle =
-    List XY
-
-
 type Game
-    = Unstarted
+    = Unstarted (WebData Words)
     | Shuffling GameState
     | InProgress GameState
     | GameOver GameState
-
-
-type alias Selected =
-    Bool
 
 
 type alias Model =
@@ -88,13 +85,15 @@ type alias Model =
 
 init : ( Model, Cmd Msg )
 init =
-    ( Unstarted
-    , Cmd.none
+    ( Unstarted Loading
+    , Words.getWords WordsResponse
     )
 
 
 type Msg
     = NoOp
+    | ManuallyDownloadWords
+    | WordsResponse (WebData String)
     | ShuffleBoard
     | NewDieFace XY Int
     | SelectDie Cell
@@ -108,19 +107,43 @@ update msg model =
         NoOp ->
             ( model, Cmd.none )
 
+        ManuallyDownloadWords ->
+            case model of
+                Unstarted _ ->
+                    ( Unstarted Loading, Words.getWords WordsResponse )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        WordsResponse wordsData ->
+            let
+                parsedWordsData =
+                    wordsData
+                        |> RemoteData.map Words.parseWordsText
+            in
+            case model of
+                Unstarted _ ->
+                    ( Unstarted parsedWordsData, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
+
         ShuffleBoard ->
             case model of
-                Unstarted ->
+                Unstarted (Success words) ->
                     let
                         gameState =
                             Board.init
                                 |> Board.stageShuffle
-                                |> initGameState
+                                |> initGameState words
                     in
                     ( Shuffling gameState
                     , gameState.board
                         |> rollDiceCmds
                     )
+
+                Unstarted _ ->
+                    ( model, Cmd.none )
 
                 GameOver gameState ->
                     let
@@ -300,8 +323,8 @@ view model =
                     ]
                 , el [ width fill, height fill, grayBg ] <|
                     case model of
-                        Unstarted ->
-                            unstartedView
+                        Unstarted wordsData ->
+                            unstartedView wordsData
 
                         Shuffling { board, submissions } ->
                             column [ centerX, centerY ]
@@ -324,13 +347,38 @@ view model =
     }
 
 
-unstartedView : Element Msg
-unstartedView =
-    el [ centerX, centerY ] <|
-        Input.button []
-            { onPress = Just ShuffleBoard
-            , label = text "Start Game!"
-            }
+unstartedView : WebData Words -> Element Msg
+unstartedView wordsData =
+    let
+        content =
+            case wordsData of
+                NotAsked ->
+                    [ Input.button []
+                        { onPress = Just ManuallyDownloadWords
+                        , label = text "Initialize Game"
+                        }
+                    ]
+
+                Loading ->
+                    [ text "Loading words dictionary..."
+                    ]
+
+                Success _ ->
+                    [ Input.button []
+                        { onPress = Just ShuffleBoard
+                        , label = text "Start Game!"
+                        }
+                    ]
+
+                Failure _ ->
+                    [ text "Failed to load words dictionary :("
+                    , Input.button []
+                        { onPress = Just ManuallyDownloadWords
+                        , label = text "Re-initialize Game?"
+                        }
+                    ]
+    in
+    column [ centerX, centerY ] content
 
 
 submitWordBtn : Selections -> Element Msg
