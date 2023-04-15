@@ -50,9 +50,9 @@ dieConfigs =
         |> List.map Array.fromList
 
 
-setDieIndex : Int -> Die -> Die
-setDieIndex newIndex (Die _ config) =
-    Die newIndex config
+setFace : Int -> Die -> Die
+setFace newFace (Die _ config) =
+    Die newFace config
 
 
 roll : Random.Generator Int

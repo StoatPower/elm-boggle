@@ -25,10 +25,60 @@ main =
         }
 
 
+type alias Player =
+    String
 
--- dimensions : Int
--- dimensions =
---     5
+
+type alias Rounds =
+    List ( Player, Score )
+
+
+type alias Score =
+    Int
+
+
+type alias Selections =
+    List Cell
+
+
+type alias Submission =
+    ( String, Score )
+
+
+type alias Submissions =
+    List Submission
+
+
+type alias GameState =
+    { board : Board
+    , selections : Selections
+    , submissions : Submissions
+    , rounds : Rounds
+    }
+
+
+initGameState : Board -> GameState
+initGameState board =
+    { board = board
+    , selections = []
+    , submissions = []
+    , rounds = []
+    }
+
+
+type alias DieToShuffle =
+    List XY
+
+
+type Game
+    = Unstarted
+    | Shuffling GameState
+    | InProgress GameState
+    | GameOver GameState
+
+
+type alias Selected =
+    Bool
 
 
 type alias Model =
@@ -44,7 +94,6 @@ init =
 
 type Msg
     = NoOp
-    | StartGame
     | ShuffleBoard
     | NewDieFace XY Int
     | SelectDie Cell
@@ -58,78 +107,83 @@ update msg model =
         NoOp ->
             ( model, Cmd.none )
 
-        StartGame ->
-            ( InProgress initGameState, Cmd.none )
-
         ShuffleBoard ->
             case model of
-                InProgress ({ board } as state) ->
+                Unstarted ->
                     let
-                        ( keys, values ) =
-                            board
-                                |> Dict.foldl
-                                    (\( k, v ) ( ks, vs ) ->
-                                        ( k :: ks, v :: vs )
-                                    )
-                                    ( [], [] )
+                        gameState =
+                            initBoard
+                                |> stageShuffle
+                                |> initGameState
                     in
-                    ( Shuffling state keys
-                    , values
-                        |> List.map
-                            (\(Cell ( x, y ) _) ->
-                                Random.generate (NewDieFace ( x, y )) Die.roll
-                            )
-                        |> Cmd.batch
+                    ( Shuffling gameState
+                    , gameState.board
+                        |> rollDiceCmds
+                    )
+
+                GameOver gameState ->
+                    let
+                        -- TODO : update gameState with new round results and reset other values
+                        newBoard =
+                            stageShuffle gameState.board
+
+                        newGameState =
+                            { gameState
+                                | board = newBoard
+                                , selections = []
+                                , submissions = []
+                            }
+                    in
+                    ( Shuffling newGameState
+                    , newGameState.board
+                        |> rollDiceCmds
                     )
 
                 _ ->
                     ( model, Cmd.none )
 
-        NewDieFace key newIndex ->
-            case model.state of
-                InProgress board score rounds selections ->
+        NewDieFace key newFace ->
+            case model of
+                Shuffling gameState ->
                     let
                         newBoard =
-                            board
-                                |> updateBoardDie key newIndex
+                            gameState.board
+                                |> Board.setNewDieFaceForCell key newFace
+
+                        newGameState =
+                            { gameState | board = newBoard }
                     in
-                    ( { model | state = InProgress newBoard score rounds selections }, Cmd.none )
+                    if Board.isShuffling newBoard then
+                        ( Shuffling newGameState, Cmd.none )
+
+                    else
+                        ( InProgress newGameState, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
 
-        SelectDie ((Cell key _ _) as cell) ->
-            case model.state of
-                InProgress board score rounds (current :: selections) ->
+        SelectDie cell ->
+            case model of
+                InProgress gameState ->
                     let
-                        newCurrent =
-                            cell :: current
-
-                        newSelections =
-                            newCurrent :: selections
+                        lastSelected =
+                            List.head gameState.selections
 
                         newBoard =
-                            board
-                                |> selectBoardCell key
+                            gameState.board
+                                |> Board.makeNewSelection
+                                    (Board.cellKey cell)
+                                    (lastSelected
+                                        |> Maybe.map Board.cellKey
+                                    )
 
-                        newState =
-                            InProgress newBoard score rounds newSelections
-                    in
-                    ( { model | state = newState }, Cmd.none )
-
-                InProgress board score rounds [] ->
-                    let
                         newSelections =
-                            [ [ cell ] ]
+                            cell :: gameState.selections
 
-                        newBoard =
-                            board
-                                |> selectBoardCell key
-
-                        newState =
-                            InProgress newBoard score rounds newSelections
+                        newGameState =
+                            { gameState | board = newBoard, selections = newSelections }
                     in
-                    ( { model | state = newState }, Cmd.none )
+                    ( InProgress newGameState, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -139,67 +193,58 @@ update msg model =
             ( model, Cmd.none )
 
         SubmitWord ->
-            case model.state of
-                InProgress board score rounds selections ->
+            case model of
+                InProgress gameState ->
                     let
                         newBoard =
-                            clearSelections board
+                            Board.clearSelectedCells gameState.board
 
-                        newState =
-                            InProgress newBoard score rounds ([] :: selections)
+                        newSubmissions =
+                            submitSelections gameState.selections
+                                :: gameState.submissions
+
+                        newGameState =
+                            { gameState
+                                | board = newBoard
+                                , selections = []
+                                , submissions = newSubmissions
+                            }
                     in
-                    ( { model | state = newState }, Cmd.none )
+                    ( InProgress newGameState, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
 
 
-updateBoardDie : XY -> Int -> Board -> Board
-updateBoardDie key newIndex board =
+rollDiceCmds : Board -> Cmd Msg
+rollDiceCmds board =
     board
-        |> Dict.update key (updateCellDie newIndex)
+        |> Dict.values
+        |> List.map
+            (\cell ->
+                let
+                    cmd =
+                        NewDieFace <| Board.cellKey cell
+                in
+                Random.generate cmd Die.roll
+            )
+        |> Cmd.batch
 
 
-updateCellDie : Int -> Maybe Cell -> Maybe Cell
-updateCellDie newIndex maybeCell =
-    case maybeCell of
-        Just (Cell ( x, y ) (Die _ dieConfig) selected) ->
-            Just <| Cell ( x, y ) (Die newIndex dieConfig) selected
-
-        Nothing ->
-            Nothing
+selectionsToWord : Selections -> String
+selectionsToWord selections =
+    selections
+        |> List.reverse
+        |> List.filterMap Board.cellFace
+        |> String.join ""
 
 
-selectBoardCell : XY -> Board -> Board
-selectBoardCell key board =
-    board
-        |> Dict.update key selectCell
-
-
-clearSelections : Board -> Board
-clearSelections board =
-    board
-        |> Dict.map (\k (Cell key die _) -> Cell key die False)
-
-
-selectCell : Maybe Cell -> Maybe Cell
-selectCell maybeCell =
-    case maybeCell of
-        Just (Cell ( x, y ) die _) ->
-            Just <| Cell ( x, y ) die True
-
-        Nothing ->
-            Nothing
-
-
-unselectCell : Maybe Cell -> Maybe Cell
-unselectCell maybeCell =
-    case maybeCell of
-        Just (Cell ( x, y ) die _) ->
-            Just <| Cell ( x, y ) die False
-
-        Nothing ->
-            Nothing
+submitSelections : Selections -> Submission
+submitSelections selections =
+    -- todo - actually score the submission
+    ( selectionsToWord selections
+    , 0
+    )
 
 
 subscriptions : Model -> Sub Msg
@@ -217,19 +262,23 @@ view model =
                     [ el [ centerX, centerY ] <| text "Boggle"
                     ]
                 , el [ width fill, height fill, grayBg ] <|
-                    case model.state of
+                    case model of
                         Unstarted ->
                             unstartedView
 
-                        InProgress board score rounds selections ->
+                        Shuffling gameState ->
+                            el [ centerX, centerY ] <| text "Shuffling"
+
+                        InProgress { board, selections, submissions } ->
                             column [ centerX, centerY ]
-                                [ boardView board selections
+                                [ boardView board
                                 , submitWordBtn
                                 , selectionsView selections
+                                , submissionsView submissions
                                 ]
 
-                        GameOver score rounds ->
-                            none
+                        GameOver gameState ->
+                            el [ centerX, centerY ] <| text "Game Over"
                 ]
         ]
     }
@@ -239,7 +288,7 @@ unstartedView : Element Msg
 unstartedView =
     el [ centerX, centerY ] <|
         Input.button []
-            { onPress = Just StartGame
+            { onPress = Just ShuffleBoard
             , label = text "Start Game!"
             }
 
@@ -255,62 +304,44 @@ submitWordBtn =
 selectionsView : Selections -> Element Msg
 selectionsView selections =
     selections
-        |> List.map selectionView
-        |> column [ width <| px 500, centerX ]
-
-
-selectionView : List Cell -> Element Msg
-selectionView stack =
-    stack
-        |> List.reverse
-        |> List.filterMap
-            (\(Cell _ die _) ->
-                Die.getFace die
-            )
-        |> String.join ""
+        |> selectionsToWord
         |> text
-        |> el [ width fill ]
+        |> el [ width <| px 500, centerX ]
 
 
-boardView : Board -> Selections -> Element Msg
-boardView board selections =
+submissionsView : Submissions -> Element Msg
+submissionsView submissions =
+    submissions
+        |> List.map submissionView
+        |> column [ width fill ]
+
+
+submissionView : Submission -> Element Msg
+submissionView ( word, score ) =
+    row []
+        [ el [] <| text word
+        , el [] <| text <| String.fromInt score
+        ]
+
+
+boardView : Board -> Element Msg
+boardView board =
     board
         |> boardToGrid
-        |> gridView selections
+        |> gridView
 
 
-gridView : Selections -> Grid -> Element Msg
-gridView selections grid =
+gridView : Grid -> Element Msg
+gridView grid =
     grid
-        |> List.map (rowView selections)
+        |> List.map rowView
         |> column [ grayBg ]
 
 
-rowView : Selections -> List Cell -> Element Msg
-rowView selections cells =
-    let
-        current =
-            case selections of
-                currentWord :: _ ->
-                    case currentWord of
-                        (Cell ( x, y ) _ _) :: _ ->
-                            Just ( x, y )
-
-                        [] ->
-                            Nothing
-
-                [] ->
-                    Nothing
-    in
+rowView : List Cell -> Element Msg
+rowView cells =
     cells
-        |> List.map
-            (\((Cell key _ _) as cell) ->
-                if Just key == current then
-                    currentCellView cell
-
-                else
-                    cellView cell
-            )
+        |> List.map cellView
         |> row [ grayBg, paddingXY 0 5, spacingXY 10 0 ]
 
 
@@ -326,7 +357,7 @@ cellView cell =
                     ( darkGrayBg, NoOp, die )
 
                 CurrentCell ( x, y ) die ->
-                    ( redBg, UnselectDie, die )
+                    ( redBg, UnselectDie cell, die )
 
                 RollingDieCell ( x, y ) die ->
                     ( darkGrayBg, NoOp, die )
@@ -381,58 +412,3 @@ bgColor color =
         |> Color.toRgba
         |> fromRgb
         |> Background.color
-
-
-
--- TYPES AND STUFF
-
-
-type alias Rounds =
-    Int
-
-
-type alias Score =
-    Int
-
-
-type alias Selections =
-    List (List Cell)
-
-
-type alias GameState =
-    { board : Board
-    , score : Score
-    , rounds : Rounds
-    , selections : Selections
-    }
-
-
-initGameState : GameState
-initGameState =
-    { board = initBoard
-    , score = 0
-    , rounds = 0
-    , selections = []
-    }
-
-
-type alias GameResult =
-    { playerName : Maybe String
-    , score : Score
-    , rounds : Rounds
-    }
-
-
-type alias DieToShuffle =
-    List XY
-
-
-type Game
-    = Unstarted
-    | Shuffling GameState DieToShuffle
-    | InProgress GameState
-    | GameOver GameResult
-
-
-type alias Selected =
-    Bool
