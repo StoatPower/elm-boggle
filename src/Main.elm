@@ -1,5 +1,6 @@
 module Main exposing (..)
 
+import Board exposing (..)
 import Browser exposing (Document)
 import Color
 import Dict exposing (Dict)
@@ -24,24 +25,19 @@ main =
         }
 
 
-dimensions : Int
-dimensions =
-    5
+
+-- dimensions : Int
+-- dimensions =
+--     5
 
 
 type alias Model =
-    { state : GameState
-    }
-
-
-defaultModel : Model
-defaultModel =
-    Model Unstarted
+    Game
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( defaultModel
+    ( Unstarted
     , Cmd.none
     )
 
@@ -63,16 +59,24 @@ update msg model =
             ( model, Cmd.none )
 
         StartGame ->
-            ( { model | state = InProgress initBoard 0 0 [] }, Cmd.none )
+            ( InProgress initGameState, Cmd.none )
 
         ShuffleBoard ->
-            case model.state of
-                InProgress board score turns selections ->
-                    ( model
-                    , board
-                        |> Dict.values
+            case model of
+                InProgress ({ board } as state) ->
+                    let
+                        ( keys, values ) =
+                            board
+                                |> Dict.foldl
+                                    (\( k, v ) ( ks, vs ) ->
+                                        ( k :: ks, v :: vs )
+                                    )
+                                    ( [], [] )
+                    in
+                    ( Shuffling state keys
+                    , values
                         |> List.map
-                            (\(Cell ( x, y ) die selected) ->
+                            (\(Cell ( x, y ) _) ->
                                 Random.generate (NewDieFace ( x, y )) Die.roll
                             )
                         |> Cmd.batch
@@ -83,20 +87,20 @@ update msg model =
 
         NewDieFace key newIndex ->
             case model.state of
-                InProgress board score turns selections ->
+                InProgress board score rounds selections ->
                     let
                         newBoard =
                             board
                                 |> updateBoardDie key newIndex
                     in
-                    ( { model | state = InProgress newBoard score turns selections }, Cmd.none )
+                    ( { model | state = InProgress newBoard score rounds selections }, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
 
         SelectDie ((Cell key _ _) as cell) ->
             case model.state of
-                InProgress board score turns (current :: selections) ->
+                InProgress board score rounds (current :: selections) ->
                     let
                         newCurrent =
                             cell :: current
@@ -109,11 +113,11 @@ update msg model =
                                 |> selectBoardCell key
 
                         newState =
-                            InProgress newBoard score turns newSelections
+                            InProgress newBoard score rounds newSelections
                     in
                     ( { model | state = newState }, Cmd.none )
 
-                InProgress board score turns [] ->
+                InProgress board score rounds [] ->
                     let
                         newSelections =
                             [ [ cell ] ]
@@ -123,7 +127,7 @@ update msg model =
                                 |> selectBoardCell key
 
                         newState =
-                            InProgress newBoard score turns newSelections
+                            InProgress newBoard score rounds newSelections
                     in
                     ( { model | state = newState }, Cmd.none )
 
@@ -136,13 +140,13 @@ update msg model =
 
         SubmitWord ->
             case model.state of
-                InProgress board score turns selections ->
+                InProgress board score rounds selections ->
                     let
                         newBoard =
                             clearSelections board
 
                         newState =
-                            InProgress newBoard score turns ([] :: selections)
+                            InProgress newBoard score rounds ([] :: selections)
                     in
                     ( { model | state = newState }, Cmd.none )
 
@@ -217,14 +221,14 @@ view model =
                         Unstarted ->
                             unstartedView
 
-                        InProgress board score turns selections ->
+                        InProgress board score rounds selections ->
                             column [ centerX, centerY ]
                                 [ boardView board selections
                                 , submitWordBtn
                                 , selectionsView selections
                                 ]
 
-                        GameOver score turns ->
+                        GameOver score rounds ->
                             none
                 ]
         ]
@@ -310,47 +314,22 @@ rowView selections cells =
         |> row [ grayBg, paddingXY 0 5, spacingXY 10 0 ]
 
 
-
---     currentView =
---         currentCellView current
---     restView =
---         rest
---             |> List.map cellView
--- in
--- currentView
---     :: restView
---     |> row [ grayBg, paddingXY 0 5, spacingXY 10 0 ]
-
-
-currentCellView : Cell -> Element Msg
-currentCellView ((Cell _ die selected) as cell) =
-    let
-        ( bg, click ) =
-            if selected then
-                ( redBg, UnselectDie cell )
-
-            else
-                ( whiteBg, NoOp )
-    in
-    el
-        [ width <| px 100
-        , height <| px 100
-        , bg
-        , onClick click
-        ]
-    <|
-        dieView die
-
-
 cellView : Cell -> Element Msg
-cellView ((Cell _ die selected) as cell) =
+cellView cell =
     let
-        ( bg, click ) =
-            if selected then
-                ( darkGrayBg, NoOp )
+        ( bg, click, currentDie ) =
+            case cell of
+                Cell ( x, y ) die ->
+                    ( whiteBg, SelectDie cell, die )
 
-            else
-                ( whiteBg, SelectDie cell )
+                SelectedCell ( x, y ) die ->
+                    ( darkGrayBg, NoOp, die )
+
+                CurrentCell ( x, y ) die ->
+                    ( redBg, UnselectDie, die )
+
+                RollingDieCell ( x, y ) die ->
+                    ( darkGrayBg, NoOp, die )
     in
     el
         [ width <| px 100
@@ -359,7 +338,7 @@ cellView ((Cell _ die selected) as cell) =
         , onClick click
         ]
     <|
-        dieView die
+        dieView currentDie
 
 
 dieView : Die -> Element Msg
@@ -371,7 +350,9 @@ dieView die =
                 |> Maybe.map text
                 |> Maybe.withDefault none
     in
-    el [ centerX, centerY ] content
+    el [ height <| px 95, width <| px 95 ] <|
+        el [ centerX, centerY ] <|
+            content
 
 
 grayBg : Attr decorative Msg
@@ -406,7 +387,7 @@ bgColor color =
 -- TYPES AND STUFF
 
 
-type alias Turns =
+type alias Rounds =
     Int
 
 
@@ -418,59 +399,40 @@ type alias Selections =
     List (List Cell)
 
 
-type GameState
+type alias GameState =
+    { board : Board
+    , score : Score
+    , rounds : Rounds
+    , selections : Selections
+    }
+
+
+initGameState : GameState
+initGameState =
+    { board = initBoard
+    , score = 0
+    , rounds = 0
+    , selections = []
+    }
+
+
+type alias GameResult =
+    { playerName : Maybe String
+    , score : Score
+    , rounds : Rounds
+    }
+
+
+type alias DieToShuffle =
+    List XY
+
+
+type Game
     = Unstarted
-    | InProgress Board Score Turns Selections
-    | GameOver Score Turns
-
-
-type alias XY =
-    ( Int, Int )
+    | Shuffling GameState DieToShuffle
+    | InProgress GameState
+    | GameOver GameResult
 
 
 type alias Selected =
     Bool
-
-
-type Cell
-    = Cell XY Die Selected
-
-
-type alias Board =
-    Dict XY Cell
-
-
-type alias Grid =
-    List (List Cell)
-
-
-initBoard : Board
-initBoard =
-    let
-        range =
-            List.range 0 (dimensions - 1)
-
-        dice =
-            Die.defaultDice
-    in
-    range
-        |> List.concatMap
-            (\x -> List.map (initCell x) range)
-        |> List.map2
-            (\die ( key, Cell xy _ s ) ->
-                ( key, Cell xy die s )
-            )
-            dice
-        |> Dict.fromList
-
-
-initCell : Int -> Int -> ( XY, Cell )
-initCell x y =
-    ( ( x, y ), Cell ( x, y ) Die.defaultDie False )
-
-
-boardToGrid : Board -> Grid
-boardToGrid board =
-    board
-        |> Dict.values
-        |> LEx.groupsOf dimensions
