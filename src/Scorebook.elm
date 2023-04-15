@@ -17,6 +17,11 @@ type alias Word =
     String
 
 
+minWordLength : Int
+minWordLength =
+    3
+
+
 wordsUrl : String
 wordsUrl =
     "https://raw.githubusercontent.com/raun/Scrabble/a9873a163e3ab5d25a209595f738280b144969ce/words.txt"

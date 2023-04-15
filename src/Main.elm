@@ -384,7 +384,7 @@ submitWordBtn : Selections -> Element Msg
 submitWordBtn selections =
     let
         ( attrs, msg ) =
-            if List.length selections > 0 then
+            if List.length selections >= Scorebook.minWordLength then
                 ( [], Just SubmitWord )
 
             else
