@@ -271,7 +271,7 @@ view model =
                         InProgress { board, selections, submissions } ->
                             column [ centerX, centerY ]
                                 [ boardView board
-                                , submitWordBtn
+                                , submitWordBtn selections
                                 , selectionsView selections
                                 , submissionsView submissions
                                 ]
@@ -292,10 +292,18 @@ unstartedView =
             }
 
 
-submitWordBtn : Element Msg
-submitWordBtn =
-    Input.button []
-        { onPress = Just SubmitWord
+submitWordBtn : Selections -> Element Msg
+submitWordBtn selections =
+    let
+        ( attrs, msg ) =
+            if List.length selections > 0 then
+                ( [], Just SubmitWord )
+
+            else
+                ( [], Nothing )
+    in
+    Input.button attrs
+        { onPress = msg
         , label = text "Submit"
         }
 
