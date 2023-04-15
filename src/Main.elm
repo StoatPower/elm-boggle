@@ -14,9 +14,10 @@ import Element.Font as Font
 import Element.Input as Input
 import Http
 import List.Extra as LEx
+import Palette exposing (..)
 import Random
 import RemoteData exposing (RemoteData(..), WebData)
-import Scorebook exposing (Score, Scorebook)
+import Scorebook exposing (Score, Scorebook, Submission(..), Submissions, Word)
 
 
 main : Program () Model Msg
@@ -39,14 +40,6 @@ type alias Rounds =
 
 type alias Selections =
     List Cell
-
-
-type alias Submission =
-    ( String, Score )
-
-
-type alias Submissions =
-    List Submission
 
 
 type alias GameState =
@@ -287,7 +280,7 @@ rollDiceCmds board =
         |> Cmd.batch
 
 
-selectionsToWord : Selections -> String
+selectionsToWord : Selections -> Word
 selectionsToWord selections =
     selections
         |> List.reverse
@@ -297,13 +290,8 @@ selectionsToWord selections =
 
 submitSelections : Selections -> Scorebook -> Submission
 submitSelections selections scorebook =
-    let
-        word =
-            selectionsToWord selections
-    in
-    ( word
-    , Scorebook.getWordScore word scorebook
-    )
+    scorebook
+        |> Scorebook.submitWord (selectionsToWord selections)
 
 
 subscriptions : Model -> Sub Msg
@@ -320,7 +308,7 @@ view model =
                 [ row [ width fill, height <| px 50 ]
                     [ el [ centerX, centerY ] <| text "Boggle"
                     ]
-                , el [ width fill, height fill, grayBg ] <|
+                , el [ width fill, height fill, Background.color gray ] <|
                     case model of
                         Unstarted wordsData ->
                             unstartedView wordsData
@@ -412,11 +400,19 @@ submissionsView submissions =
 
 
 submissionView : Submission -> Element Msg
-submissionView ( word, score ) =
-    row []
-        [ el [] <| text word
-        , el [] <| text <| String.fromInt score
-        ]
+submissionView submission =
+    case submission of
+        ValidWord ( word, score ) ->
+            row []
+                [ el [] <| text word
+                , el [] <| text <| String.fromInt score
+                ]
+
+        InvalidWord ( word, score ) ->
+            row []
+                [ el [] <| text word
+                , el [ Font.color red ] <| text <| String.fromInt score
+                ]
 
 
 boardView : Board -> Element Msg
@@ -430,14 +426,14 @@ gridView : Grid -> Element Msg
 gridView grid =
     grid
         |> List.map rowView
-        |> column [ grayBg ]
+        |> column [ Background.color gray ]
 
 
 rowView : List Cell -> Element Msg
 rowView cells =
     cells
         |> List.map cellView
-        |> row [ grayBg, paddingXY 0 5, spacingXY 10 0 ]
+        |> row [ Background.color gray, paddingXY 0 5, spacingXY 10 0 ]
 
 
 cellView : Cell -> Element Msg
@@ -446,16 +442,16 @@ cellView cell =
         ( bg, click, currentDie ) =
             case cell of
                 Cell ( x, y ) die ->
-                    ( whiteBg, SelectDie cell, die )
+                    ( Background.color white, SelectDie cell, die )
 
                 SelectedCell ( x, y ) die ->
-                    ( darkGrayBg, NoOp, die )
+                    ( Background.color darkGray, NoOp, die )
 
                 CurrentCell ( x, y ) die ->
-                    ( redBg, UnselectDie, die )
+                    ( Background.color red, UnselectDie, die )
 
                 RollingDieCell ( x, y ) die ->
-                    ( darkGrayBg, NoOp, die )
+                    ( Background.color darkGray, NoOp, die )
     in
     el
         [ width <| px 100
@@ -479,31 +475,3 @@ dieView die =
     el [ height <| px 95, width <| px 95 ] <|
         el [ centerX, centerY ] <|
             content
-
-
-grayBg : Attr decorative Msg
-grayBg =
-    bgColor Color.lightGray
-
-
-darkGrayBg : Attr decorative Msg
-darkGrayBg =
-    bgColor Color.darkGray
-
-
-redBg : Attr decorative Msg
-redBg =
-    bgColor Color.red
-
-
-whiteBg : Attr decorative Msg
-whiteBg =
-    bgColor Color.white
-
-
-bgColor : Color.Color -> Attr decorative Msg
-bgColor color =
-    color
-        |> Color.toRgba
-        |> fromRgb
-        |> Background.color

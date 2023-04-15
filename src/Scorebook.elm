@@ -17,6 +17,15 @@ type alias Word =
     String
 
 
+type Submission
+    = ValidWord ( Word, Score )
+    | InvalidWord ( Word, Score )
+
+
+type alias Submissions =
+    List Submission
+
+
 minWordLength : Int
 minWordLength =
     3
@@ -75,11 +84,11 @@ scoreWord word =
     ( word, score )
 
 
-getWordScore : Word -> Trie Score -> Score
-getWordScore word trie =
+submitWord : Word -> Trie Score -> Submission
+submitWord word trie =
     case Trie.get word trie of
         Just score ->
-            score
+            ValidWord ( word, score )
 
         Nothing ->
-            -2
+            InvalidWord ( word, -2 )
