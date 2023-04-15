@@ -81,6 +81,19 @@ makeNewSelection selected maybeLastSelected board =
                 |> Dict.update (Cell.getKey selected) (Maybe.map Cell.markCurrent)
 
 
+undoLastSelection : Cell -> Maybe Cell -> Board -> Board
+undoLastSelection selected maybePrevSelected board =
+    case maybePrevSelected of
+        Just prevSelected ->
+            board
+                |> Dict.update (Cell.getKey selected) (Maybe.map Cell.markCell)
+                |> Dict.update (Cell.getKey prevSelected) (Maybe.map Cell.markCurrent)
+
+        Nothing ->
+            board
+                |> Dict.update (Cell.getKey selected) (Maybe.map Cell.markCell)
+
+
 clearSelectedCells : Board -> Board
 clearSelectedCells board =
     board

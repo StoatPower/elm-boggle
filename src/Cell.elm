@@ -87,6 +87,9 @@ markCurrent cell =
         Cell xy die ->
             CurrentCell xy die
 
+        SelectedCell xy die ->
+            CurrentCell xy die
+
         _ ->
             cell
 

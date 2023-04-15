@@ -1,6 +1,6 @@
 module Main exposing (..)
 
-import Board exposing (Board, Grid)
+import Board exposing (Board, Grid, undoLastSelection)
 import Browser exposing (Document)
 import Cell exposing (Cell(..), XY)
 import Color
@@ -98,7 +98,7 @@ type Msg
     | ShuffleBoard
     | NewDieFace XY Int
     | SelectDie Cell
-    | UnselectDie Cell
+    | UnselectDie
     | SubmitWord
 
 
@@ -187,9 +187,34 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
-        UnselectDie _ ->
-            -- todo
-            ( model, Cmd.none )
+        UnselectDie ->
+            case model of
+                InProgress gameState ->
+                    let
+                        ( newBoard, newSelections ) =
+                            case gameState.selections of
+                                [] ->
+                                    ( gameState.board, [] )
+
+                                h :: [] ->
+                                    ( gameState.board
+                                        |> Board.undoLastSelection h Nothing
+                                    , []
+                                    )
+
+                                h :: n :: t ->
+                                    ( gameState.board
+                                        |> Board.undoLastSelection h (Just n)
+                                    , n :: t
+                                    )
+
+                        newGameState =
+                            { gameState | board = newBoard, selections = newSelections }
+                    in
+                    ( InProgress newGameState, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
         SubmitWord ->
             case model of
@@ -213,6 +238,19 @@ update msg model =
 
                 _ ->
                     ( model, Cmd.none )
+
+
+lastTwoSelections : Selections -> ( Maybe Cell, Maybe Cell )
+lastTwoSelections selections =
+    case selections of
+        [] ->
+            ( Nothing, Nothing )
+
+        first :: [] ->
+            ( Just first, Nothing )
+
+        first :: second :: _ ->
+            ( Just first, Just second )
 
 
 rollDiceCmds : Board -> Cmd Msg
@@ -265,8 +303,11 @@ view model =
                         Unstarted ->
                             unstartedView
 
-                        Shuffling gameState ->
-                            el [ centerX, centerY ] <| text "Shuffling"
+                        Shuffling { board, submissions } ->
+                            column [ centerX, centerY ]
+                                [ boardView board
+                                , submissionsView submissions
+                                ]
 
                         InProgress { board, selections, submissions } ->
                             column [ centerX, centerY ]
@@ -364,7 +405,7 @@ cellView cell =
                     ( darkGrayBg, NoOp, die )
 
                 CurrentCell ( x, y ) die ->
-                    ( redBg, UnselectDie cell, die )
+                    ( redBg, UnselectDie, die )
 
                 RollingDieCell ( x, y ) die ->
                     ( darkGrayBg, NoOp, die )
