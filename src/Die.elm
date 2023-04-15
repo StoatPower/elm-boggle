@@ -76,3 +76,13 @@ defaultDice =
 getFace : Die -> Maybe String
 getFace (Die index config) =
     Array.get index config
+        |> Maybe.map augmentQ
+
+
+augmentQ : String -> String
+augmentQ char =
+    if char == "q" then
+        "qu"
+
+    else
+        char

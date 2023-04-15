@@ -243,7 +243,7 @@ update msg model =
                             Board.clearSelectedCells gameState.board
 
                         newSubmissions =
-                            submitSelections gameState.selections
+                            submitSelections gameState.selections gameState.scorebook
                                 :: gameState.submissions
 
                         newGameState =
@@ -295,11 +295,14 @@ selectionsToWord selections =
         |> String.join ""
 
 
-submitSelections : Selections -> Submission
-submitSelections selections =
-    -- todo - actually score the submission
-    ( selectionsToWord selections
-    , 0
+submitSelections : Selections -> Scorebook -> Submission
+submitSelections selections scorebook =
+    let
+        word =
+            selectionsToWord selections
+    in
+    ( word
+    , Scorebook.getWordScore word scorebook
     )
 
 

@@ -13,6 +13,10 @@ type alias Scorebook =
     Trie Score
 
 
+type alias Word =
+    String
+
+
 wordsUrl : String
 wordsUrl =
     "https://raw.githubusercontent.com/raun/Scrabble/a9873a163e3ab5d25a209595f738280b144969ce/words.txt"
@@ -38,7 +42,7 @@ getScorebookSource message =
         }
 
 
-scoreWord : String -> ( String, Score )
+scoreWord : Word -> ( Word, Score )
 scoreWord word =
     let
         length =
@@ -64,3 +68,13 @@ scoreWord word =
                 0
     in
     ( word, score )
+
+
+getWordScore : Word -> Trie Score -> Score
+getWordScore word trie =
+    case Trie.get word trie of
+        Just score ->
+            score
+
+        Nothing ->
+            -2
