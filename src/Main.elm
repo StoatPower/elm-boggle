@@ -3,7 +3,6 @@ module Main exposing (..)
 import Board exposing (Board, Grid)
 import Browser exposing (Document)
 import Cell exposing (Cell(..), XY)
-import Color
 import Dict exposing (Dict)
 import Die exposing (Die(..))
 import Element as El exposing (..)
@@ -12,7 +11,6 @@ import Element.Border as Border
 import Element.Events as Events exposing (onClick)
 import Element.Font as Font
 import Element.Input as Input
-import Http
 import List.Extra as LEx
 import Palette exposing (..)
 import Random
@@ -340,9 +338,10 @@ unstartedView wordsData =
         content =
             case wordsData of
                 NotAsked ->
-                    [ Input.button []
-                        { onPress = Just ManuallyDownloadWords
-                        , label = text "Initialize Game"
+                    [ standardBtn
+                        { attrs = [ Background.color darkGray ]
+                        , onPress = Just ManuallyDownloadWords
+                        , text = "Initialize Game"
                         }
                     ]
 
@@ -351,17 +350,19 @@ unstartedView wordsData =
                     ]
 
                 Success _ ->
-                    [ Input.button []
-                        { onPress = Just ShuffleBoard
-                        , label = text "Start Game!"
+                    [ standardBtn
+                        { attrs = [ Background.color darkGray ]
+                        , onPress = Just ShuffleBoard
+                        , text = "Start Game!"
                         }
                     ]
 
                 Failure _ ->
                     [ text "Failed to load words dictionary :("
-                    , Input.button []
-                        { onPress = Just ManuallyDownloadWords
-                        , label = text "Re-initialize Game?"
+                    , standardBtn
+                        { attrs = [ Background.color darkGray ]
+                        , onPress = Just ManuallyDownloadWords
+                        , text = "Re-initialize Game?"
                         }
                     ]
     in
@@ -373,14 +374,35 @@ submitWordBtn selections =
     let
         ( attrs, msg ) =
             if List.length selections >= Scorebook.minWordLength then
-                ( [], Just SubmitWord )
+                ( [ Background.color green ], Just SubmitWord )
 
             else
-                ( [], Nothing )
+                ( [ Background.color darkGray ], Nothing )
     in
-    Input.button attrs
-        { onPress = msg
-        , label = text "Submit"
+    standardBtn
+        { attrs = attrs
+        , onPress = msg
+        , text = "Submit"
+        }
+
+
+standardBtn :
+    { opts
+        | attrs : List (Attr () Msg)
+        , onPress : Maybe Msg
+        , text : String
+    }
+    -> Element Msg
+standardBtn opts =
+    Input.button
+        ([ width <| px 250
+         , height <| px 65
+         , Border.rounded 5
+         ]
+            ++ opts.attrs
+        )
+        { onPress = opts.onPress
+        , label = el [ centerX, centerY ] <| text opts.text
         }
 
 

@@ -24,6 +24,11 @@ white =
     toColor Color.white
 
 
+green : Color
+green =
+    toColor Color.green
+
+
 toColor : Color.Color -> Color
 toColor color =
     color
