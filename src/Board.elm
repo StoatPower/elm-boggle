@@ -1,19 +1,9 @@
 module Board exposing (..)
 
+import Cell exposing (Cell(..), XY)
 import Dict exposing (Dict)
 import Die exposing (Die(..))
 import List.Extra as LEx
-
-
-type alias XY =
-    ( Int, Int )
-
-
-type Cell
-    = Cell XY Die
-    | SelectedCell XY Die
-    | CurrentCell XY Die
-    | RollingDieCell XY Die
 
 
 type alias Board =
@@ -29,8 +19,8 @@ dimensions =
     5
 
 
-initBoard : Board
-initBoard =
+init : Board
+init =
     let
         range =
             List.range 0 (dimensions - 1)
@@ -40,23 +30,13 @@ initBoard =
     in
     range
         |> List.concatMap
-            (\x -> List.map (initPosition x) range)
-        |> List.map2 initCell dice
+            (\x -> List.map (Cell.initPosition x) range)
+        |> List.map2 Cell.init dice
         |> Dict.fromList
 
 
-initPosition : Int -> Int -> XY
-initPosition x y =
-    ( x, y )
-
-
-initCell : Die -> XY -> ( XY, Cell )
-initCell die position =
-    ( position, Cell position die )
-
-
-boardToGrid : Board -> Grid
-boardToGrid board =
+toGrid : Board -> Grid
+toGrid board =
     board
         |> Dict.values
         |> LEx.groupsOf dimensions
@@ -65,7 +45,7 @@ boardToGrid board =
 setNewDieFaceForCell : XY -> Int -> Board -> Board
 setNewDieFaceForCell key newFace board =
     board
-        |> Dict.update key (Maybe.map <| finishRollingDie newFace)
+        |> Dict.update key (Maybe.map <| Cell.finishRollingDie newFace)
 
 
 stageShuffle : Board -> Board
@@ -75,7 +55,7 @@ stageShuffle board =
             (\_ cell ->
                 let
                     ( xy, die ) =
-                        cellData cell
+                        Cell.getData cell
                 in
                 RollingDieCell xy die
             )
@@ -85,109 +65,23 @@ isShuffling : Board -> Bool
 isShuffling board =
     board
         |> Dict.values
-        |> List.any cellIsRollingDie
+        |> List.any Cell.isRollingDie
 
 
-cellData : Cell -> ( XY, Die )
-cellData cell =
-    case cell of
-        Cell xy die ->
-            ( xy, die )
-
-        SelectedCell xy die ->
-            ( xy, die )
-
-        CurrentCell xy die ->
-            ( xy, die )
-
-        RollingDieCell xy die ->
-            ( xy, die )
-
-
-cellKey : Cell -> XY
-cellKey cell =
-    cell
-        |> cellData
-        |> Tuple.first
-
-
-cellDie : Cell -> Die
-cellDie cell =
-    cell
-        |> cellData
-        |> Tuple.second
-
-
-cellFace : Cell -> Maybe String
-cellFace cell =
-    cell
-        |> cellDie
-        |> Die.getFace
-
-
-cellIsRollingDie : Cell -> Bool
-cellIsRollingDie cell =
-    case cell of
-        RollingDieCell _ _ ->
-            True
-
-        _ ->
-            False
-
-
-finishRollingDie : Int -> Cell -> Cell
-finishRollingDie newFace cell =
-    case cell of
-        RollingDieCell xy die ->
-            Cell xy <| Die.setFace newFace die
-
-        _ ->
-            cell
-
-
-makeNewSelection : XY -> Maybe XY -> Board -> Board
-makeNewSelection newKey maybeOldKey board =
-    case maybeOldKey of
-        Just oldKey ->
+makeNewSelection : Cell -> Maybe Cell -> Board -> Board
+makeNewSelection selected maybeLastSelected board =
+    case maybeLastSelected of
+        Just lastSelected ->
             board
-                |> Dict.update newKey (Maybe.map markCurrentCell)
-                |> Dict.update oldKey (Maybe.map markSelectedCell)
+                |> Dict.update (Cell.getKey selected) (Maybe.map Cell.markCurrent)
+                |> Dict.update (Cell.getKey lastSelected) (Maybe.map Cell.markSelected)
 
         Nothing ->
             board
-                |> Dict.update newKey (Maybe.map markCurrentCell)
+                |> Dict.update (Cell.getKey selected) (Maybe.map Cell.markCurrent)
 
 
 clearSelectedCells : Board -> Board
 clearSelectedCells board =
     board
-        |> Dict.map (\_ cell -> markCell cell)
-
-
-markCurrentCell : Cell -> Cell
-markCurrentCell cell =
-    case cell of
-        Cell xy die ->
-            CurrentCell xy die
-
-        _ ->
-            cell
-
-
-markSelectedCell : Cell -> Cell
-markSelectedCell cell =
-    case cell of
-        CurrentCell xy die ->
-            SelectedCell xy die
-
-        _ ->
-            cell
-
-
-markCell : Cell -> Cell
-markCell cell =
-    let
-        ( xy, die ) =
-            cellData cell
-    in
-    Cell xy die
+        |> Dict.map (\_ cell -> Cell.markCell cell)

@@ -1,7 +1,8 @@
 module Main exposing (..)
 
-import Board exposing (..)
+import Board exposing (Board, Grid)
 import Browser exposing (Document)
+import Cell exposing (Cell(..), XY)
 import Color
 import Dict exposing (Dict)
 import Die exposing (Die(..))
@@ -112,8 +113,8 @@ update msg model =
                 Unstarted ->
                     let
                         gameState =
-                            initBoard
-                                |> stageShuffle
+                            Board.init
+                                |> Board.stageShuffle
                                 |> initGameState
                     in
                     ( Shuffling gameState
@@ -125,7 +126,7 @@ update msg model =
                     let
                         -- TODO : update gameState with new round results and reset other values
                         newBoard =
-                            stageShuffle gameState.board
+                            Board.stageShuffle gameState.board
 
                         newGameState =
                             { gameState
@@ -172,10 +173,8 @@ update msg model =
                         newBoard =
                             gameState.board
                                 |> Board.makeNewSelection
-                                    (Board.cellKey cell)
-                                    (lastSelected
-                                        |> Maybe.map Board.cellKey
-                                    )
+                                    cell
+                                    lastSelected
 
                         newSelections =
                             cell :: gameState.selections
@@ -224,7 +223,7 @@ rollDiceCmds board =
             (\cell ->
                 let
                     cmd =
-                        NewDieFace <| Board.cellKey cell
+                        NewDieFace <| Cell.getKey cell
                 in
                 Random.generate cmd Die.roll
             )
@@ -235,7 +234,7 @@ selectionsToWord : Selections -> String
 selectionsToWord selections =
     selections
         |> List.reverse
-        |> List.filterMap Board.cellFace
+        |> List.filterMap Cell.getDieFace
         |> String.join ""
 
 
@@ -327,7 +326,7 @@ submissionView ( word, score ) =
 boardView : Board -> Element Msg
 boardView board =
     board
-        |> boardToGrid
+        |> Board.toGrid
         |> gridView
 
 
