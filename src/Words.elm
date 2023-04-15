@@ -1,7 +1,5 @@
 module Words exposing (..)
 
-import Bytes exposing (Endianness(..))
-import Bytes.Decode as Decode
 import Http
 import RemoteData exposing (WebData)
 
@@ -13,12 +11,6 @@ wordsUrl =
 
 type alias Words =
     List String
-
-
-decodeBytes : Decode.Decoder String
-decodeBytes =
-    Decode.unsignedInt32 BE
-        |> Decode.andThen Decode.string
 
 
 parseWordsText : String -> List String
