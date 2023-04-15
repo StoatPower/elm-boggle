@@ -16,7 +16,7 @@ import Http
 import List.Extra as LEx
 import Random
 import RemoteData exposing (RemoteData(..), WebData)
-import Words exposing (Words)
+import Scorebook exposing (Score, Scorebook)
 
 
 main : Program () Model Msg
@@ -37,10 +37,6 @@ type alias Rounds =
     List ( Player, Score )
 
 
-type alias Score =
-    Int
-
-
 type alias Selections =
     List Cell
 
@@ -58,22 +54,22 @@ type alias GameState =
     , selections : Selections
     , submissions : Submissions
     , rounds : Rounds
-    , dictionary : Words
+    , scorebook : Scorebook
     }
 
 
-initGameState : Words -> Board -> GameState
-initGameState words board =
+initGameState : Scorebook -> Board -> GameState
+initGameState scorebook board =
     { board = board
     , selections = []
     , submissions = []
     , rounds = []
-    , dictionary = words
+    , scorebook = scorebook
     }
 
 
 type Game
-    = Unstarted (WebData Words)
+    = Unstarted (WebData Scorebook)
     | Shuffling GameState
     | InProgress GameState
     | GameOver GameState
@@ -86,14 +82,14 @@ type alias Model =
 init : ( Model, Cmd Msg )
 init =
     ( Unstarted Loading
-    , Words.getWords WordsResponse
+    , Scorebook.getScorebookSource ScorebookSourceResponse
     )
 
 
 type Msg
     = NoOp
     | ManuallyDownloadWords
-    | WordsResponse (WebData String)
+    | ScorebookSourceResponse (WebData String)
     | ShuffleBoard
     | NewDieFace XY Int
     | SelectDie Cell
@@ -110,20 +106,20 @@ update msg model =
         ManuallyDownloadWords ->
             case model of
                 Unstarted _ ->
-                    ( Unstarted Loading, Words.getWords WordsResponse )
+                    ( Unstarted Loading, Scorebook.getScorebookSource ScorebookSourceResponse )
 
                 _ ->
                     ( model, Cmd.none )
 
-        WordsResponse wordsData ->
+        ScorebookSourceResponse sbData ->
             let
-                parsedWordsData =
-                    wordsData
-                        |> RemoteData.map Words.parseWordsText
+                scorebookData =
+                    sbData
+                        |> RemoteData.map Scorebook.buildScorebook
             in
             case model of
                 Unstarted _ ->
-                    ( Unstarted parsedWordsData, Cmd.none )
+                    ( Unstarted scorebookData, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -347,7 +343,7 @@ view model =
     }
 
 
-unstartedView : WebData Words -> Element Msg
+unstartedView : WebData Scorebook -> Element Msg
 unstartedView wordsData =
     let
         content =
