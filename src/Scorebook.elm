@@ -93,7 +93,7 @@ scoreWord word trie =
 
 fmtScore : Score -> String
 fmtScore score =
-    if score >= 0 then
+    if score > 0 then
         "+" ++ String.fromInt score
 
     else

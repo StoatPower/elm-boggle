@@ -337,78 +337,41 @@ view : Model -> Document Msg
 view model =
     { title = "Boggle"
     , body =
-        case model of
-            Unstarted wordsData ->
-                [ El.layout [ width fill, height fill, Background.color nero ] <|
-                    column [ width fill, height fill ]
-                        [ headerView
-                        , unstartedView wordsData
-                        ]
-                ]
+        [ El.layout [ width fill, height fill, Background.color nero ] <|
+            column [ width fill, height fill ]
+                [ headerView
+                , el
+                    [ width fill
+                    , height fill
+                    ]
+                  <|
+                    case model of
+                        Unstarted wordsData ->
+                            unstartedView wordsData
 
-            Shuffling { board, submissions } ->
-                [ El.layout [ width fill, Background.color nero ] <|
-                    column [ width fill ]
-                        [ headerView
-                        , column [ centerX, centerY, moveDown 100, spacingXY 0 15 ]
-                            [ boardView board
-                            , outputView model
-                            ]
-                        ]
-                ]
+                        Shuffling { board, submissions } ->
+                            column [ centerX, centerY ]
+                                [ boardView board
 
-            InProgress { board, selections, submissions, elapsedSeconds } ->
-                [ El.layout [ width fill, Background.color nero ] <|
-                    column [ width fill ]
-                        [ headerView
-                        , column [ centerX, centerY, moveDown 100, spacingXY 0 15 ]
-                            [ timerView elapsedSeconds
-                            , boardView board
-                            , outputView model
-                            ]
-                        ]
-                ]
+                                -- , submissionsView submissions
+                                ]
 
-            GameOver gameState ->
-                [ El.layout [ width fill, height fill, Background.color nero ] <|
-                    column [ width fill, height fill ]
-                        [ headerView
-                        , el [ centerX, centerY ] <| text "Game Over"
-                        ]
-                ]
+                        InProgress { board, selections, submissions, elapsedSeconds } ->
+                            column
+                                [ centerX
+                                , centerY
+                                , spacingXY 0 15
+                                ]
+                                [ timerView elapsedSeconds
+                                , el [ onLeft <| submissionsView submissions ] <|
+                                    boardView board
+                                , inputView model
+                                ]
 
-    -- [ El.layout [ width fill, Background.color nero ] <|
-    --     column [ width fill ]
-    --         [ headerView
-    --         , el
-    --             [ width fill
-    --             -- , height fill
-    --             -- , Background.color nero
-    --             -- , inFront <| outputView model
-    --             ]
-    --           <|
-    --             case model of
-    --                 Unstarted wordsData ->
-    --                     unstartedView wordsData
-    --                 Shuffling { board, submissions } ->
-    --                     column [ centerX, centerY ]
-    --                         [ boardView board
-    --                         , submissionsView submissions
-    --                         ]
-    --                 InProgress { board, selections, submissions } ->
-    --                     column
-    --                         [ centerX
-    --                         , centerY
-    --                         , spacingXY 0 15
-    --                         ]
-    --                         [ boardView board
-    --                         , outputView model
-    --                         -- , el [ centerX, moveDown 15 ] <| submitWordBtn selections
-    --                         ]
-    --                 GameOver gameState ->
-    --                     el [ centerX, centerY ] <| text "Game Over"
-    --         ]
-    -- ]
+                        GameOver gameState ->
+                            el [ centerX, centerY ] <| text "Game Over"
+                ]
+        ]
     }
 
 
@@ -465,18 +428,16 @@ unstartedView wordsData =
     column [ centerX, centerY ] content
 
 
-outputView : Model -> Element Msg
-outputView model =
+inputView : Model -> Element Msg
+inputView model =
     case model of
-        InProgress { selections, submissions } ->
+        InProgress { selections } ->
             column
-                [ width <| px 500
-                , centerX
+                [ width fill
                 , Font.color atlantis
                 , spacingXY 0 10
                 ]
                 [ selectionsView selections
-                , submissionsView submissions
                 ]
 
         _ ->
@@ -486,8 +447,9 @@ outputView model =
 selectionsView : Selections -> Element Msg
 selectionsView selections =
     row
-        [ width fill
+        [ width <| px 500
         , paddingXY 0 5
+        , centerX
         , Font.size 20
         , Border.widthEach { bottom = 2, left = 0, right = 0, top = 0 }
         , Border.dotted
@@ -504,13 +466,47 @@ selectionsView selections =
 
 submissionsView : Submissions -> Element Msg
 submissionsView submissions =
+    let
+        totalScore =
+            submissions
+                |> Submissions.tallySubmissions
+
+        totalScoreColor =
+            if totalScore < 0 then
+                Font.color red
+
+            else if totalScore == 0 then
+                Font.color chiffon
+
+            else
+                Font.color atlantis
+    in
     submissions
         |> List.map submissionView
+        |> List.append
+            [ row
+                [ Font.size 28
+                , spacingXY 10 0
+                , paddingEach { bottom = 5, top = 0, left = 0, right = 0 }
+                , alignRight
+                , Font.alignRight
+                , Border.dotted
+                , Border.widthEach { bottom = 2, top = 0, left = 0, right = 0 }
+                , Border.color chiffon
+                ]
+                [ el [ Font.color chiffon, Font.letterSpacing 1.5 ] <| text "Total Score"
+                , el [ totalScoreColor ] <|
+                    el [ width <| px 45 ] <|
+                        text <|
+                            Scorebook.fmtScore totalScore
+                ]
+            ]
         |> column
-            [ width fill
-            , Font.size 18
+            [ Font.size 18
             , Font.color atlantis
             , spacingXY 0 10
+            , paddingXY 25 0
+            , alignRight
             ]
 
 
@@ -518,11 +514,11 @@ submissionView : Submission -> Element Msg
 submissionView submission =
     let
         viewFn word score scoreAttrs =
-            row [ width fill, spacingXY 10 0 ]
-                [ el [ width <| fillPortion 1, Font.alignRight ] <|
+            row [ spacingXY 10 0, alignRight, Font.alignRight ]
+                [ el [ Font.color chiffon, Font.letterSpacing 1.5 ] <|
                     text word
-                , el ([ width <| fillPortion 1 ] ++ scoreAttrs) <|
-                    el [ width <| px 45, Font.alignRight ] <|
+                , el ([] ++ scoreAttrs) <|
+                    el [ width <| px 45 ] <|
                         text <|
                             Scorebook.fmtScore score
                 ]
@@ -696,7 +692,7 @@ timerView elapsedSeconds =
                 |> modBy 60
                 |> fmtTime
     in
-    el [ Font.color atlantis, Font.size 34 ] <|
+    el [ Font.color atlantis, Font.size 34, centerX ] <|
         text (minutes ++ ":" ++ seconds)
 
 

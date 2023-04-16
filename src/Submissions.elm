@@ -12,6 +12,26 @@ type alias Submissions =
     List Submission
 
 
+tallySubmissions : Submissions -> Score
+tallySubmissions submissions =
+    submissions
+        |> List.foldl
+            (\submission tally ->
+                getScore submission + tally
+            )
+            0
+
+
+getScore : Submission -> Score
+getScore submission =
+    case submission of
+        ValidWord _ score ->
+            score
+
+        InvalidWord _ score ->
+            score
+
+
 submitWord : Word -> Scorebook -> Submissions -> Submissions
 submitWord word scorebook submissions =
     let
