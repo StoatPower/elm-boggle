@@ -70,31 +70,129 @@ isShuffling board =
 
 makeNewSelection : Cell -> Maybe Cell -> Board -> Board
 makeNewSelection selected maybeLastSelected board =
+    let
+        selectedKey =
+            Cell.getKey selected
+    in
     case maybeLastSelected of
         Just lastSelected ->
+            let
+                lastSelectedKey =
+                    Cell.getKey lastSelected
+            in
+            -- n-th selection, no cells are pristine
+            -- first reset old currently available cells, minus the new key
+            -- then revert old current back to selected
+            -- then set new key to current
+            -- then set our available cells
             board
-                |> Dict.update (Cell.getKey selected) (Maybe.map Cell.markCurrent)
-                |> Dict.update (Cell.getKey lastSelected) (Maybe.map Cell.markSelected)
+                |> updateAsUnreachable
+                    (Cell.adjacentPositions lastSelectedKey
+                        |> List.filter (\xy -> xy /= selectedKey)
+                    )
+                |> updateAsSelected lastSelectedKey
+                |> updateAsCurrent selectedKey
+                |> updateCurrentlyAvailableCells selectedKey
 
         Nothing ->
+            -- our first selection, start by setting as current
+            -- then marking everything else unreachable
+            -- then set our available cells
             board
-                |> Dict.update (Cell.getKey selected) (Maybe.map Cell.markCurrent)
+                |> updateAsCurrent selectedKey
+                |> updateAsUnreachable
+                    (Dict.keys board
+                        |> List.filter (\xy -> xy /= selectedKey)
+                    )
+                |> updateCurrentlyAvailableCells selectedKey
 
 
 undoLastSelection : Cell -> Maybe Cell -> Board -> Board
 undoLastSelection selected maybePrevSelected board =
     case maybePrevSelected of
         Just prevSelected ->
+            let
+                selectedKey =
+                    Cell.getKey selected
+
+                prevSelectedKey =
+                    Cell.getKey prevSelected
+            in
+            -- first reset old currently available cells, including current cell, to unreachable
+            -- then update the previous selected key to current
+            -- then update its currently available cells
             board
-                |> Dict.update (Cell.getKey selected) (Maybe.map Cell.markCell)
-                |> Dict.update (Cell.getKey prevSelected) (Maybe.map Cell.markCurrent)
+                |> updateAsUnreachable (selectedKey :: Cell.adjacentPositions selectedKey)
+                |> updateAsCurrent prevSelectedKey
+                |> updateCurrentlyAvailableCells prevSelectedKey
 
         Nothing ->
+            -- only selection left, so mark all cells as fresh
             board
-                |> Dict.update (Cell.getKey selected) (Maybe.map Cell.markCell)
+                |> resetAllCells
 
 
-clearSelectedCells : Board -> Board
-clearSelectedCells board =
+updateAsCurrent : XY -> Board -> Board
+updateAsCurrent xy board =
+    board
+        |> updateCellWith Cell.markCurrent xy
+
+
+updateAsSelected : XY -> Board -> Board
+updateAsSelected xy board =
+    board
+        |> updateCellWith Cell.markSelected xy
+
+
+updateAsCell : XY -> Board -> Board
+updateAsCell xy board =
+    board
+        |> updateCellWith Cell.markCell xy
+
+
+updateAsUnreachable : List XY -> Board -> Board
+updateAsUnreachable positions board =
+    positions
+        |> List.foldl (updateCellWith Cell.markUnreachable)
+            board
+
+
+updateCellWith : (Cell -> Cell) -> XY -> Board -> Board
+updateCellWith cellMapper xy board =
+    Dict.update xy (Maybe.map cellMapper) board
+
+
+resetAllCells : Board -> Board
+resetAllCells board =
     board
         |> Dict.map (\_ cell -> Cell.markCell cell)
+
+
+updateCurrentlyAvailableCells : XY -> Board -> Board
+updateCurrentlyAvailableCells xy board =
+    xy
+        |> Cell.adjacentPositions
+        |> List.filterMap
+            (\pos ->
+                board
+                    |> Dict.get pos
+                    |> Maybe.andThen validNextCellSelection
+            )
+        |> List.foldl (Cell.getKey >> updateCellWith Cell.markAvailable)
+            board
+
+
+validNextCellSelection : Cell -> Maybe Cell
+validNextCellSelection cell =
+    case cell of
+        Cell _ _ ->
+            Just cell
+
+        AvailableCell _ _ ->
+            Just cell
+
+        UnreachableCell _ _ ->
+            Just cell
+
+        _ ->
+            Nothing

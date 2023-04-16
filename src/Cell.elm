@@ -14,6 +14,8 @@ initPosition x y =
 
 type Cell
     = Cell XY Die
+    | AvailableCell XY Die
+    | UnreachableCell XY Die
     | SelectedCell XY Die
     | CurrentCell XY Die
     | RollingDieCell XY Die
@@ -28,6 +30,12 @@ getData : Cell -> ( XY, Die )
 getData cell =
     case cell of
         Cell xy die ->
+            ( xy, die )
+
+        AvailableCell xy die ->
+            ( xy, die )
+
+        UnreachableCell xy die ->
             ( xy, die )
 
         SelectedCell xy die ->
@@ -87,6 +95,9 @@ markCurrent cell =
         Cell xy die ->
             CurrentCell xy die
 
+        AvailableCell xy die ->
+            CurrentCell xy die
+
         SelectedCell xy die ->
             CurrentCell xy die
 
@@ -111,3 +122,138 @@ markCell cell =
             getData cell
     in
     Cell xy die
+
+
+markAvailable : Cell -> Cell
+markAvailable cell =
+    case cell of
+        Cell xy die ->
+            AvailableCell xy die
+
+        UnreachableCell xy die ->
+            AvailableCell xy die
+
+        _ ->
+            cell
+
+
+markUnreachable : Cell -> Cell
+markUnreachable cell =
+    case cell of
+        Cell xy die ->
+            UnreachableCell xy die
+
+        AvailableCell xy die ->
+            UnreachableCell xy die
+
+        CurrentCell xy die ->
+            UnreachableCell xy die
+
+        _ ->
+            cell
+
+
+adjacentPositions : XY -> List XY
+adjacentPositions xy =
+    [ westPosition
+    , northWestPosition
+    , northPosition
+    , northEastPosition
+    , eastPosition
+    , southEastPosition
+    , southPosition
+    , southWestPosition
+    ]
+        |> List.filterMap (\fn -> fn xy)
+
+
+westPosition : XY -> Maybe XY
+westPosition xy =
+    case xy of
+        ( 0, _ ) ->
+            Nothing
+
+        ( x, y ) ->
+            Just ( x - 1, y )
+
+
+northWestPosition : XY -> Maybe XY
+northWestPosition xy =
+    case xy of
+        ( 0, _ ) ->
+            Nothing
+
+        ( _, 0 ) ->
+            Nothing
+
+        ( x, y ) ->
+            Just ( x - 1, y - 1 )
+
+
+northPosition : XY -> Maybe XY
+northPosition xy =
+    case xy of
+        ( _, 0 ) ->
+            Nothing
+
+        ( x, y ) ->
+            Just ( x, y - 1 )
+
+
+northEastPosition : XY -> Maybe XY
+northEastPosition xy =
+    case xy of
+        ( 4, _ ) ->
+            Nothing
+
+        ( _, 0 ) ->
+            Nothing
+
+        ( x, y ) ->
+            Just ( x + 1, y - 1 )
+
+
+eastPosition : XY -> Maybe XY
+eastPosition xy =
+    case xy of
+        ( 4, _ ) ->
+            Nothing
+
+        ( x, y ) ->
+            Just ( x + 1, y )
+
+
+southEastPosition : XY -> Maybe XY
+southEastPosition xy =
+    case xy of
+        ( 4, _ ) ->
+            Nothing
+
+        ( _, 4 ) ->
+            Nothing
+
+        ( x, y ) ->
+            Just ( x + 1, y + 1 )
+
+
+southPosition : XY -> Maybe XY
+southPosition xy =
+    case xy of
+        ( _, 4 ) ->
+            Nothing
+
+        ( x, y ) ->
+            Just ( x, y + 1 )
+
+
+southWestPosition : XY -> Maybe XY
+southWestPosition xy =
+    case xy of
+        ( 0, _ ) ->
+            Nothing
+
+        ( _, 4 ) ->
+            Nothing
+
+        ( x, y ) ->
+            Just ( x - 1, y + 1 )

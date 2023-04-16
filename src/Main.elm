@@ -231,7 +231,7 @@ update msg model =
                 InProgress gameState ->
                     let
                         newBoard =
-                            Board.clearSelectedCells gameState.board
+                            Board.resetAllCells gameState.board
 
                         newSubmissions =
                             submitSelections gameState.selections gameState.scorebook
@@ -461,26 +461,33 @@ rowView cells =
 cellView : Cell -> Element Msg
 cellView cell =
     let
-        ( bg, click, currentDie ) =
+        ( attrs, click, currentDie ) =
             case cell of
                 Cell ( x, y ) die ->
-                    ( Background.color white, SelectDie cell, die )
+                    ( [ Background.color white, pointer ], SelectDie cell, die )
+
+                AvailableCell ( x, y ) die ->
+                    ( [ Background.color white, pointer ], SelectDie cell, die )
+
+                UnreachableCell ( x, y ) die ->
+                    ( [ Background.color white ], NoOp, die )
 
                 SelectedCell ( x, y ) die ->
-                    ( Background.color darkGray, NoOp, die )
+                    ( [ Background.color darkGray ], NoOp, die )
 
                 CurrentCell ( x, y ) die ->
-                    ( Background.color red, UnselectDie, die )
+                    ( [ Background.color lightRed, pointer ], UnselectDie, die )
 
                 RollingDieCell ( x, y ) die ->
-                    ( Background.color darkGray, NoOp, die )
+                    ( [ Background.color darkGray ], NoOp, die )
     in
     el
-        [ width <| px 100
-        , height <| px 100
-        , bg
-        , onClick click
-        ]
+        ([ width <| px 100
+         , height <| px 100
+         , onClick click
+         ]
+            ++ attrs
+        )
     <|
         dieView currentDie
 

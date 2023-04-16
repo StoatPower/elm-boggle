@@ -19,6 +19,16 @@ red =
     toColor Color.red
 
 
+darkRed : Color
+darkRed =
+    toColor Color.darkRed
+
+
+lightRed : Color
+lightRed =
+    toColor Color.lightRed
+
+
 white : Color
 white =
     toColor Color.white
