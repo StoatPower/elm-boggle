@@ -15,7 +15,10 @@ import List.Extra as LEx
 import Palette exposing (..)
 import Random
 import RemoteData exposing (RemoteData(..), WebData)
-import Scorebook exposing (Score, Scorebook, Submission(..), Submissions, Word)
+import Scorebook exposing (Score, Scorebook, Word)
+import Submissions exposing (Submission(..), Submissions)
+import Task
+import Time
 
 
 main : Program () Model Msg
@@ -46,6 +49,7 @@ type alias GameState =
     , submissions : Submissions
     , rounds : Rounds
     , scorebook : Scorebook
+    , elapsedSeconds : Int
     }
 
 
@@ -56,7 +60,17 @@ initGameState scorebook board =
     , submissions = []
     , rounds = []
     , scorebook = scorebook
+    , elapsedSeconds = 0
     }
+
+
+
+-- startTimer : GameState -> GameState
+-- startTimer gameState =
+--     let
+--         now = Time.now
+--     in
+--     {gameState | timeStart = Time.now }
 
 
 type Game
@@ -86,6 +100,7 @@ type Msg
     | SelectDie Cell
     | UnselectDie
     | SubmitWord
+    | Tick Time.Posix
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -143,6 +158,7 @@ update msg model =
                                 | board = newBoard
                                 , selections = []
                                 , submissions = []
+                                , elapsedSeconds = 0
                             }
                     in
                     ( Shuffling newGameState
@@ -234,8 +250,10 @@ update msg model =
                             Board.resetAllCells gameState.board
 
                         newSubmissions =
-                            submitSelections gameState.selections gameState.scorebook
-                                :: gameState.submissions
+                            gameState.submissions
+                                |> Submissions.submitWord
+                                    (selectionsToWord gameState.selections)
+                                    gameState.scorebook
 
                         newGameState =
                             { gameState
@@ -245,6 +263,21 @@ update msg model =
                             }
                     in
                     ( InProgress newGameState, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        Tick _ ->
+            case model of
+                InProgress gameState ->
+                    if gameState.elapsedSeconds < 180 then
+                        ( InProgress
+                            { gameState | elapsedSeconds = gameState.elapsedSeconds + 1 }
+                        , Cmd.none
+                        )
+
+                    else
+                        ( GameOver gameState, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -286,50 +319,113 @@ selectionsToWord selections =
         |> String.join ""
 
 
-submitSelections : Selections -> Scorebook -> Submission
-submitSelections selections scorebook =
-    scorebook
-        |> Scorebook.submitWord (selectionsToWord selections)
-
-
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.none
+    case model of
+        InProgress { elapsedSeconds } ->
+            if elapsedSeconds < 180 then
+                Time.every 1000 Tick
+
+            else
+                Sub.none
+
+        _ ->
+            Sub.none
 
 
 view : Model -> Document Msg
 view model =
     { title = "Boggle"
     , body =
-        [ El.layout [ height fill, width fill ] <|
-            column [ width fill, height fill ]
-                [ row [ width fill, height <| px 50 ]
-                    [ el [ centerX, centerY ] <| text "Boggle"
-                    ]
-                , el [ width fill, height fill, Background.color gray ] <|
-                    case model of
-                        Unstarted wordsData ->
-                            unstartedView wordsData
-
-                        Shuffling { board, submissions } ->
-                            column [ centerX, centerY ]
-                                [ boardView board
-                                , submissionsView submissions
-                                ]
-
-                        InProgress { board, selections, submissions } ->
-                            column [ centerX, centerY ]
-                                [ boardView board
-                                , submitWordBtn selections
-                                , selectionsView selections
-                                , submissionsView submissions
-                                ]
-
-                        GameOver gameState ->
-                            el [ centerX, centerY ] <| text "Game Over"
+        case model of
+            Unstarted wordsData ->
+                [ El.layout [ width fill, height fill, Background.color nero ] <|
+                    column [ width fill, height fill ]
+                        [ headerView
+                        , unstartedView wordsData
+                        ]
                 ]
-        ]
+
+            Shuffling { board, submissions } ->
+                [ El.layout [ width fill, Background.color nero ] <|
+                    column [ width fill ]
+                        [ headerView
+                        , column [ centerX, centerY, moveDown 100, spacingXY 0 15 ]
+                            [ boardView board
+                            , outputView model
+                            ]
+                        ]
+                ]
+
+            InProgress { board, selections, submissions, elapsedSeconds } ->
+                [ El.layout [ width fill, Background.color nero ] <|
+                    column [ width fill ]
+                        [ headerView
+                        , column [ centerX, centerY, moveDown 100, spacingXY 0 15 ]
+                            [ timerView elapsedSeconds
+                            , boardView board
+                            , outputView model
+                            ]
+                        ]
+                ]
+
+            GameOver gameState ->
+                [ El.layout [ width fill, height fill, Background.color nero ] <|
+                    column [ width fill, height fill ]
+                        [ headerView
+                        , el [ centerX, centerY ] <| text "Game Over"
+                        ]
+                ]
+
+    -- [ El.layout [ width fill, Background.color nero ] <|
+    --     column [ width fill ]
+    --         [ headerView
+    --         , el
+    --             [ width fill
+    --             -- , height fill
+    --             -- , Background.color nero
+    --             -- , inFront <| outputView model
+    --             ]
+    --           <|
+    --             case model of
+    --                 Unstarted wordsData ->
+    --                     unstartedView wordsData
+    --                 Shuffling { board, submissions } ->
+    --                     column [ centerX, centerY ]
+    --                         [ boardView board
+    --                         , submissionsView submissions
+    --                         ]
+    --                 InProgress { board, selections, submissions } ->
+    --                     column
+    --                         [ centerX
+    --                         , centerY
+    --                         , spacingXY 0 15
+    --                         ]
+    --                         [ boardView board
+    --                         , outputView model
+    --                         -- , el [ centerX, moveDown 15 ] <| submitWordBtn selections
+    --                         ]
+    --                 GameOver gameState ->
+    --                     el [ centerX, centerY ] <| text "Game Over"
+    --         ]
+    -- ]
     }
+
+
+headerView : Element Msg
+headerView =
+    row [ width fill, height <| px 50, Background.color atlantis ]
+        [ el
+            [ centerX
+            , centerY
+            , Font.color lisbonBrown
+            , Font.letterSpacing 4
+            , Font.size 24
+            , Font.extraBold
+            ]
+          <|
+            text "BOGGLE"
+        ]
 
 
 unstartedView : WebData Scorebook -> Element Msg
@@ -351,7 +447,7 @@ unstartedView wordsData =
 
                 Success _ ->
                     [ standardBtn
-                        { attrs = [ Background.color darkGray ]
+                        { attrs = [ Background.color atlantis ]
                         , onPress = Just ShuffleBoard
                         , text = "Start Game!"
                         }
@@ -369,72 +465,74 @@ unstartedView wordsData =
     column [ centerX, centerY ] content
 
 
-submitWordBtn : Selections -> Element Msg
-submitWordBtn selections =
-    let
-        ( attrs, msg ) =
-            if List.length selections >= Scorebook.minWordLength then
-                ( [ Background.color green ], Just SubmitWord )
+outputView : Model -> Element Msg
+outputView model =
+    case model of
+        InProgress { selections, submissions } ->
+            column
+                [ width <| px 500
+                , centerX
+                , Font.color atlantis
+                , spacingXY 0 10
+                ]
+                [ selectionsView selections
+                , submissionsView submissions
+                ]
 
-            else
-                ( [ Background.color darkGray ], Nothing )
-    in
-    standardBtn
-        { attrs = attrs
-        , onPress = msg
-        , text = "Submit"
-        }
-
-
-standardBtn :
-    { opts
-        | attrs : List (Attr () Msg)
-        , onPress : Maybe Msg
-        , text : String
-    }
-    -> Element Msg
-standardBtn opts =
-    Input.button
-        ([ width <| px 250
-         , height <| px 65
-         , Border.rounded 5
-         ]
-            ++ opts.attrs
-        )
-        { onPress = opts.onPress
-        , label = el [ centerX, centerY ] <| text opts.text
-        }
+        _ ->
+            none
 
 
 selectionsView : Selections -> Element Msg
 selectionsView selections =
-    selections
-        |> selectionsToWord
-        |> text
-        |> el [ width <| px 500, centerX ]
+    row
+        [ width fill
+        , paddingXY 0 5
+        , Font.size 20
+        , Border.widthEach { bottom = 2, left = 0, right = 0, top = 0 }
+        , Border.dotted
+        , Border.color chiffon
+        ]
+        [ el [ width <| px 65 ] <| text ">>"
+        , selections
+            |> selectionsToWord
+            |> text
+            |> el [ Font.letterSpacing 4, paddingXY 10 0, centerX ]
+        , el [ alignRight ] <| submitWordBtn selections
+        ]
 
 
 submissionsView : Submissions -> Element Msg
 submissionsView submissions =
     submissions
         |> List.map submissionView
-        |> column [ width fill ]
+        |> column
+            [ width fill
+            , Font.size 18
+            , Font.color atlantis
+            , spacingXY 0 10
+            ]
 
 
 submissionView : Submission -> Element Msg
 submissionView submission =
+    let
+        viewFn word score scoreAttrs =
+            row [ width fill, spacingXY 10 0 ]
+                [ el [ width <| fillPortion 1, Font.alignRight ] <|
+                    text word
+                , el ([ width <| fillPortion 1 ] ++ scoreAttrs) <|
+                    el [ width <| px 45, Font.alignRight ] <|
+                        text <|
+                            Scorebook.fmtScore score
+                ]
+    in
     case submission of
-        ValidWord ( word, score ) ->
-            row []
-                [ el [] <| text word
-                , el [] <| text <| String.fromInt score
-                ]
+        ValidWord word score ->
+            viewFn word score []
 
-        InvalidWord ( word, score ) ->
-            row []
-                [ el [] <| text word
-                , el [ Font.color red ] <| text <| String.fromInt score
-                ]
+        InvalidWord word score ->
+            viewFn word score [ Font.color red ]
 
 
 boardView : Board -> Element Msg
@@ -448,52 +546,84 @@ gridView : Grid -> Element Msg
 gridView grid =
     grid
         |> List.map rowView
-        |> column [ Background.color gray ]
+        |> column [ Background.color chiffon ]
 
 
 rowView : List Cell -> Element Msg
 rowView cells =
     cells
         |> List.map cellView
-        |> row [ Background.color gray, paddingXY 0 5, spacingXY 10 0 ]
+        |> row [ Background.color nero, paddingXY 0 5, spacingXY 10 0 ]
 
 
 cellView : Cell -> Element Msg
 cellView cell =
     let
-        ( attrs, click, currentDie ) =
+        ( cellAttrs, dieOpts, currentDie ) =
             case cell of
                 Cell ( x, y ) die ->
-                    ( [ Background.color white, pointer ], SelectDie cell, die )
+                    ( []
+                    , { attrs = [ Background.color shadowGreen ]
+                      , onPress = Just (SelectDie cell)
+                      }
+                    , die
+                    )
 
                 AvailableCell ( x, y ) die ->
-                    ( [ Background.color white, pointer ], SelectDie cell, die )
+                    ( []
+                    , { attrs = [ Background.color shadowGreen ]
+                      , onPress = Just <| SelectDie cell
+                      }
+                    , die
+                    )
 
                 UnreachableCell ( x, y ) die ->
-                    ( [ Background.color white ], NoOp, die )
+                    ( []
+                    , { attrs = [ Background.color shadowGreen ]
+                      , onPress = Nothing
+                      }
+                    , die
+                    )
 
                 SelectedCell ( x, y ) die ->
-                    ( [ Background.color darkGray ], NoOp, die )
+                    ( []
+                    , { attrs = [ Background.color lisbonBrown, Font.color atlantis ]
+                      , onPress = Nothing
+                      }
+                    , die
+                    )
 
                 CurrentCell ( x, y ) die ->
-                    ( [ Background.color lightRed, pointer ], UnselectDie, die )
+                    ( []
+                    , { attrs = [ Background.color <| atlantis, Font.color lisbonBrown ]
+                      , onPress = Just UnselectDie
+                      }
+                    , die
+                    )
 
                 RollingDieCell ( x, y ) die ->
-                    ( [ Background.color darkGray ], NoOp, die )
+                    ( []
+                    , { attrs = [ Background.color shadowGreen ], onPress = Nothing }
+                    , die
+                    )
     in
     el
         ([ width <| px 100
          , height <| px 100
-         , onClick click
+         , paddingXY 10 10
+         , Border.rounded 4
+         , Background.color chiffon
          ]
-            ++ attrs
+            ++ cellAttrs
         )
     <|
-        dieView currentDie
+        dieView
+            dieOpts
+            currentDie
 
 
-dieView : Die -> Element Msg
-dieView die =
+dieView : { opts | attrs : List (Attr () Msg), onPress : Maybe Msg } -> Die -> Element Msg
+dieView opts die =
     let
         content =
             die
@@ -501,6 +631,79 @@ dieView die =
                 |> Maybe.map text
                 |> Maybe.withDefault none
     in
-    el [ height <| px 95, width <| px 95 ] <|
-        el [ centerX, centerY ] <|
-            content
+    Input.button
+        ([ height fill
+         , width fill
+         , centerX
+         , centerY
+         , Border.rounded 8
+         ]
+            ++ opts.attrs
+        )
+        { onPress = opts.onPress
+        , label =
+            el [ centerX, centerY ] <|
+                content
+        }
+
+
+submitWordBtn : Selections -> Element Msg
+submitWordBtn selections =
+    let
+        ( attrs, msg ) =
+            if List.length selections >= Scorebook.minWordLength then
+                ( [ Font.color atlantis ], Just SubmitWord )
+
+            else
+                ( [ Font.color chiffon ], Nothing )
+    in
+    Input.button
+        ([ width <| px 65 ] ++ attrs)
+        { onPress = msg
+        , label = el [ centerX, centerY, Font.letterSpacing 1.5 ] <| text "Submit"
+        }
+
+
+standardBtn :
+    { opts
+        | attrs : List (Attr () Msg)
+        , onPress : Maybe Msg
+        , text : String
+    }
+    -> Element Msg
+standardBtn opts =
+    Input.button
+        ([ width <| px 250
+         , height <| px 55
+         , Border.rounded 5
+         , Font.letterSpacing 2
+         ]
+            ++ opts.attrs
+        )
+        { onPress = opts.onPress
+        , label = el [ centerX, centerY ] <| text opts.text
+        }
+
+
+timerView : Int -> Element Msg
+timerView elapsedSeconds =
+    let
+        minutes =
+            fmtTime <| elapsedSeconds // 60
+
+        seconds =
+            elapsedSeconds
+                |> modBy 60
+                |> fmtTime
+    in
+    el [ Font.color atlantis, Font.size 34 ] <|
+        text (minutes ++ ":" ++ seconds)
+
+
+fmtTime : Int -> String
+fmtTime time =
+    if time < 10 then
+        "0" ++ String.fromInt time
+
+    else
+        String.fromInt time

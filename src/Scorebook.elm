@@ -17,13 +17,8 @@ type alias Word =
     String
 
 
-type Submission
-    = ValidWord ( Word, Score )
-    | InvalidWord ( Word, Score )
-
-
-type alias Submissions =
-    List Submission
+type alias ScoreResult =
+    Result Score Score
 
 
 minWordLength : Int
@@ -40,7 +35,7 @@ buildScorebook : String -> Scorebook
 buildScorebook text =
     text
         |> String.split "\n"
-        |> List.map (String.trim >> String.toLower >> scoreWord)
+        |> List.map (String.trim >> String.toLower >> defaultWordScore)
         |> List.foldl
             (\( word, score ) trie ->
                 Trie.insert word score trie
@@ -56,8 +51,8 @@ getScorebookSource message =
         }
 
 
-scoreWord : Word -> ( Word, Score )
-scoreWord word =
+defaultWordScore : Word -> ( Word, Score )
+defaultWordScore word =
     let
         length =
             String.length word
@@ -84,11 +79,22 @@ scoreWord word =
     ( word, score )
 
 
-submitWord : Word -> Trie Score -> Submission
-submitWord word trie =
-    case Trie.get word trie of
-        Just score ->
-            ValidWord ( word, score )
+invalidWordScore : Score
+invalidWordScore =
+    -2
 
-        Nothing ->
-            InvalidWord ( word, -2 )
+
+scoreWord : Word -> Scorebook -> ScoreResult
+scoreWord word trie =
+    trie
+        |> Trie.get word
+        |> Result.fromMaybe invalidWordScore
+
+
+fmtScore : Score -> String
+fmtScore score =
+    if score >= 0 then
+        "+" ++ String.fromInt score
+
+    else
+        String.fromInt score
