@@ -489,7 +489,7 @@ unstartedView wordsData =
             case wordsData of
                 NotAsked ->
                     [ standardBtn
-                        { attrs = [ Background.color darkGray ]
+                        { attrs = [ Background.color atlantis ]
                         , onPress = Just ManuallyDownloadWords
                         , text = "Initialize Game"
                         }
@@ -510,7 +510,7 @@ unstartedView wordsData =
                 Failure _ ->
                     [ text "Failed to load words dictionary :("
                     , standardBtn
-                        { attrs = [ Background.color darkGray ]
+                        { attrs = [ Background.color atlantis ]
                         , onPress = Just ManuallyDownloadWords
                         , text = "Re-initialize Game?"
                         }
@@ -602,7 +602,7 @@ submissionView submission =
             viewFn word score []
 
         InvalidWord word score ->
-            viewFn word score [ Font.color red ]
+            viewFn word score [ Font.color alizarinCrimson ]
 
 
 gameOverView : GameState -> Element Msg
@@ -620,7 +620,7 @@ gameOverView gameState =
         [ el
             [ Font.bold
             , Font.size 64
-            , Font.color red
+            , Font.color alizarinCrimson
             , Font.letterSpacing 8
             ]
           <|
@@ -917,7 +917,7 @@ padNumber time =
 scoreColor : Score -> Attr () Msg
 scoreColor score =
     if score < 0 then
-        Font.color red
+        Font.color alizarinCrimson
 
     else if score == 0 then
         Font.color chiffon

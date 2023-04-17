@@ -1,6 +1,5 @@
 module Palette exposing (..)
 
-import Color
 import Element as El exposing (Color)
 
 
@@ -12,7 +11,6 @@ type alias Alpha =
 --
 -- Nero, Atlantis, Chiffon, Shadow Green, Lisbon Brown
 -- https://coolors.co/100b00-85cb33-efffc8-a5cbc3-3b341f
--- names from
 --
 
 
@@ -41,48 +39,6 @@ lisbonBrown =
     El.rgb255 59 52 31
 
 
-gray : Color
-gray =
-    toColor Color.lightGray
-
-
-darkGray : Color
-darkGray =
-    toColor Color.darkGray
-
-
-red : Color
-red =
-    toColor Color.red
-
-
-darkRed : Color
-darkRed =
-    toColor Color.darkRed
-
-
-lightRed : Color
-lightRed =
-    toColor Color.lightRed
-
-
-white : Color
-white =
-    toColor Color.white
-
-
-green : Color
-green =
-    toColor Color.green
-
-
-lightBrown : Color
-lightBrown =
-    toColor Color.lightBrown
-
-
-toColor : Color.Color -> Color
-toColor color =
-    color
-        |> Color.toRgba
-        |> El.fromRgb
+alizarinCrimson : Color
+alizarinCrimson =
+    El.rgb255 215 38 61
