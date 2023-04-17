@@ -73,6 +73,7 @@ type Game
     | Shuffling GameState
     | InProgress GameState
     | GameOver GameState
+    | HighScores GameState
 
 
 type alias Model =
@@ -96,6 +97,7 @@ type Msg
     | UnselectDie
     | SubmitWord
     | PlayerInputChange String
+    | SubmitPlayerScore Player Score
     | Tick Time.Posix
 
 
@@ -271,6 +273,18 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
+        SubmitPlayerScore player finalScore ->
+            case model of
+                GameOver gameState ->
+                    let
+                        newRounds =
+                            ( player, finalScore ) :: gameState.rounds
+                    in
+                    ( HighScores { gameState | rounds = newRounds }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
+
         Tick _ ->
             case model of
                 InProgress gameState ->
@@ -374,6 +388,9 @@ view model =
 
                         GameOver gameState ->
                             gameOverView gameState
+
+                        HighScores gameState ->
+                            none
                 ]
         ]
     }
@@ -599,7 +616,21 @@ gameOverView gameState =
                 , height fill
                 , Border.roundEach { topLeft = 0, bottomLeft = 0, topRight = 5, bottomRight = 5 }
                 ]
-                { onPress = Nothing
+                { onPress =
+                    case gameState.player of
+                        Just player ->
+                            let
+                                nameLength =
+                                    player |> String.trim |> String.length
+                            in
+                            if nameLength > 0 then
+                                Just <| SubmitPlayerScore player finalScore
+
+                            else
+                                Nothing
+
+                        Nothing ->
+                            Nothing
                 , label = el [ paddingXY 10 0 ] <| text "Submit"
                 }
             ]
