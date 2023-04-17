@@ -145,9 +145,8 @@ update msg model =
                 Unstarted _ ->
                     ( model, Cmd.none )
 
-                GameOver gameState ->
+                HighScores gameState ->
                     let
-                        -- TODO : update gameState with new round results and reset other values
                         newBoard =
                             Board.stageShuffle gameState.board
 
@@ -157,6 +156,7 @@ update msg model =
                                 , selections = []
                                 , submissions = []
                                 , elapsedSeconds = 0
+                                , player = Nothing
                             }
                     in
                     ( Shuffling newGameState
@@ -390,7 +390,7 @@ view model =
                             gameOverView gameState
 
                         HighScores gameState ->
-                            none
+                            highScoresView gameState.rounds
                 ]
         ]
     }
@@ -491,16 +491,6 @@ submissionsView submissions =
         totalScore =
             submissions
                 |> Submissions.tallySubmissions
-
-        totalScoreColor =
-            if totalScore < 0 then
-                Font.color red
-
-            else if totalScore == 0 then
-                Font.color chiffon
-
-            else
-                Font.color atlantis
     in
     submissions
         |> List.map submissionView
@@ -516,7 +506,7 @@ submissionsView submissions =
                 , Border.color chiffon
                 ]
                 [ el [ Font.color chiffon, Font.letterSpacing 1.5 ] <| text "Total Score"
-                , el [ totalScoreColor ] <|
+                , el [ scoreColor totalScore ] <|
                     el [ width <| px 45 ] <|
                         text <|
                             Scorebook.fmtScore totalScore
@@ -558,16 +548,6 @@ gameOverView gameState =
         finalScore =
             gameState.submissions
                 |> Submissions.tallySubmissions
-
-        finalScoreColor =
-            if finalScore < 0 then
-                Font.color red
-
-            else if finalScore == 0 then
-                Font.color chiffon
-
-            else
-                Font.color atlantis
     in
     column
         [ centerX
@@ -593,7 +573,7 @@ gameOverView gameState =
             , paddingXY 0 10
             ]
             [ el [ Font.color chiffon ] <| text "Final Score"
-            , el [ finalScoreColor ] <| text (String.fromInt finalScore)
+            , el [ scoreColor finalScore ] <| text (String.fromInt finalScore)
             ]
         , row
             [ centerX ]
@@ -634,6 +614,66 @@ gameOverView gameState =
                 , label = el [ paddingXY 10 0 ] <| text "Submit"
                 }
             ]
+        ]
+
+
+highScoresView : Rounds -> Element Msg
+highScoresView rounds =
+    let
+        top10 =
+            rounds
+                |> List.sortBy Tuple.second
+                |> List.take 10
+                |> List.reverse
+    in
+    column
+        [ centerX
+        , centerY
+        , width <| px 500
+        , Font.color chiffon
+        , Font.letterSpacing 1.5
+        , spacingXY 0 25
+        ]
+        [ el
+            [ Font.size 24
+            , Font.bold
+            , Font.center
+            , Font.letterSpacing 2
+            , width fill
+            , Border.widthEach { bottom = 2, top = 0, left = 0, right = 0 }
+            , Border.dotted
+            , paddingXY 0 10
+            ]
+          <|
+            text "HIGH SCORES"
+        , top10
+            |> List.indexedMap highScoreView
+            |> column [ width fill, spacingXY 0 25 ]
+        , standardBtn
+            { attrs =
+                [ Background.color atlantis
+                , centerX
+                , Font.color lisbonBrown
+                , moveDown 100
+                ]
+            , onPress = Just ShuffleBoard
+            , text = "Next Round!"
+            }
+        ]
+
+
+highScoreView : Int -> ( Player, Score ) -> Element Msg
+highScoreView index ( player, score ) =
+    row
+        [ width fill
+        , Font.color chiffon
+        , Font.size 18
+        , Font.letterSpacing 1.5
+        , spacingXY 15 0
+        ]
+        [ el [] <| text (padNumber (index + 1) ++ ".")
+        , el [] <| text player
+        , el [ scoreColor score, alignRight ] <| text <| String.fromInt score
         ]
 
 
@@ -791,21 +831,33 @@ timerView : Int -> Element Msg
 timerView elapsedSeconds =
     let
         minutes =
-            fmtTime <| elapsedSeconds // 60
+            padNumber <| elapsedSeconds // 60
 
         seconds =
             elapsedSeconds
                 |> modBy 60
-                |> fmtTime
+                |> padNumber
     in
     el [ Font.color atlantis, Font.size 34, centerX ] <|
         text (minutes ++ ":" ++ seconds)
 
 
-fmtTime : Int -> String
-fmtTime time =
+padNumber : Int -> String
+padNumber time =
     if time < 10 then
         "0" ++ String.fromInt time
 
     else
         String.fromInt time
+
+
+scoreColor : Score -> Attr () Msg
+scoreColor score =
+    if score < 0 then
+        Font.color red
+
+    else if score == 0 then
+        Font.color chiffon
+
+    else
+        Font.color atlantis

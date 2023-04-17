@@ -40,7 +40,11 @@ submitWord word scorebook submissions =
                 |> Scorebook.scoreWord word
                 |> toSubmission word
     in
-    submission :: submissions
+    if List.member submission submissions then
+        submissions
+
+    else
+        submission :: submissions
 
 
 toSubmission : Word -> ScoreResult -> Submission
