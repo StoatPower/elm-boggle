@@ -48,6 +48,7 @@ type alias GameState =
     , rounds : Rounds
     , scorebook : Scorebook
     , remainingSeconds : Int
+    , remainingShuffleMillis : Int
     }
 
 
@@ -59,12 +60,18 @@ initGameState scorebook board =
     , player = Nothing
     , rounds = []
     , scorebook = scorebook
-    , remainingSeconds = defaultTime
+    , remainingSeconds = defaultTimeSeconds
+    , remainingShuffleMillis = shuffleForMillis
     }
 
 
-defaultTime : Int
-defaultTime =
+shuffleForMillis : Int
+shuffleForMillis =
+    100
+
+
+defaultTimeSeconds : Int
+defaultTimeSeconds =
     180
 
 
@@ -156,7 +163,7 @@ update msg model =
                                 | board = newBoard
                                 , selections = []
                                 , submissions = []
-                                , remainingSeconds = defaultTime
+                                , remainingSeconds = defaultTimeSeconds
                                 , player = Nothing
                             }
                     in
@@ -179,24 +186,23 @@ update msg model =
                         newGameState =
                             { gameState | board = newBoard }
                     in
-                    if Board.isShuffling newBoard then
-                        ( Shuffling newGameState, Cmd.none )
-
-                    else
-                        ( InProgress newGameState, Cmd.none )
+                    ( Shuffling newGameState, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
 
         DiceSwapped ( xy1, xy2 ) ->
             case model of
-                InProgress gameState ->
+                Shuffling gameState ->
                     let
                         newBoard =
                             gameState.board
                                 |> Board.swapCellDice xy1 xy2
+
+                        newGameState =
+                            { gameState | board = newBoard }
                     in
-                    ( InProgress { gameState | board = newBoard }, Cmd.none )
+                    ( Shuffling newGameState, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -294,13 +300,39 @@ update msg model =
                         newRounds =
                             ( player, finalScore ) :: gameState.rounds
                     in
-                    ( HighScores { gameState | rounds = newRounds }, Cmd.none )
+                    ( HighScores
+                        { gameState
+                            | rounds = newRounds
+                            , remainingShuffleMillis = shuffleForMillis
+                        }
+                    , Cmd.none
+                    )
 
                 _ ->
                     ( model, Cmd.none )
 
         Tick _ ->
             case model of
+                Shuffling gameState ->
+                    case ( gameState.remainingShuffleMillis > 0, Board.diceAreRolling gameState.board ) of
+                        ( True, True ) ->
+                            ( Shuffling
+                                { gameState | remainingShuffleMillis = gameState.remainingShuffleMillis - 1 }
+                            , Cmd.none
+                            )
+
+                        ( True, False ) ->
+                            ( Shuffling
+                                { gameState | remainingShuffleMillis = gameState.remainingShuffleMillis - 1 }
+                            , gameState.board |> rollDiceCmd
+                            )
+
+                        ( False, True ) ->
+                            ( InProgress gameState, Cmd.none )
+
+                        ( False, False ) ->
+                            ( InProgress gameState, Cmd.none )
+
                 InProgress gameState ->
                     if gameState.remainingSeconds > 0 then
                         ( InProgress
@@ -364,6 +396,13 @@ selectionsToWord selections =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model of
+        Shuffling { remainingShuffleMillis } ->
+            if remainingShuffleMillis >= 0 then
+                Time.every 1 Tick
+
+            else
+                Sub.none
+
         InProgress { remainingSeconds } ->
             if remainingSeconds >= 0 then
                 Time.every 1000 Tick
@@ -392,8 +431,16 @@ view model =
                             unstartedView wordsData
 
                         Shuffling { board, submissions } ->
-                            column [ centerX, centerY ]
-                                [ boardView board
+                            column [ centerX, centerY, spacingXY 0 15 ]
+                                [ el
+                                    [ Font.color atlantis
+                                    , Font.size 34
+                                    , centerX
+                                    , Font.letterSpacing 2
+                                    ]
+                                  <|
+                                    text " "
+                                , boardView board
                                 , submissionsView submissions
                                 ]
 
@@ -406,7 +453,7 @@ view model =
                                 [ timerView remainingSeconds
                                 , el [ onLeft <| submissionsView submissions ] <|
                                     boardView board
-                                , inputView model
+                                , inputView selections
                                 ]
 
                         GameOver gameState ->
@@ -472,20 +519,15 @@ unstartedView wordsData =
     column [ centerX, centerY ] content
 
 
-inputView : Model -> Element Msg
-inputView model =
-    case model of
-        InProgress { selections } ->
-            column
-                [ width fill
-                , Font.color atlantis
-                , spacingXY 0 10
-                ]
-                [ selectionsView selections
-                ]
-
-        _ ->
-            none
+inputView : Selections -> Element Msg
+inputView selections =
+    column
+        [ width fill
+        , Font.color atlantis
+        , spacingXY 0 10
+        ]
+        [ selectionsView selections
+        ]
 
 
 selectionsView : Selections -> Element Msg
@@ -515,33 +557,31 @@ submissionsView submissions =
             submissions
                 |> Submissions.tallySubmissions
     in
-    submissions
-        |> List.map submissionView
-        |> List.append
-            [ row
-                [ Font.size 28
-                , spacingXY 10 0
-                , paddingEach { bottom = 5, top = 0, left = 0, right = 0 }
-                , alignRight
-                , Font.alignRight
-                , Border.dotted
-                , Border.widthEach { bottom = 2, top = 0, left = 0, right = 0 }
-                , Border.color chiffon
-                ]
-                [ el [ Font.color chiffon, Font.letterSpacing 1.5 ] <| text "Total Score"
-                , el [ scoreColor totalScore ] <|
-                    el [ width <| px 45 ] <|
-                        text <|
-                            Scorebook.fmtScore totalScore
-                ]
-            ]
-        |> column
-            [ Font.size 18
-            , Font.color atlantis
-            , spacingXY 0 10
-            , paddingXY 25 0
+    column
+        [ Font.size 18
+        , Font.color atlantis
+        , spacingXY 0 10
+        , paddingXY 25 0
+        , alignRight
+        ]
+        (row
+            [ Font.size 28
+            , spacingXY 10 0
+            , paddingEach { bottom = 5, top = 0, left = 0, right = 0 }
             , alignRight
+            , Font.alignRight
+            , Border.dotted
+            , Border.widthEach { bottom = 2, top = 0, left = 0, right = 0 }
+            , Border.color chiffon
             ]
+            [ el [ Font.color chiffon, Font.letterSpacing 1.5 ] <| text "Total Score"
+            , el [ scoreColor totalScore ] <|
+                el [ width <| px 45 ] <|
+                    text <|
+                        Scorebook.fmtScore totalScore
+            ]
+            :: List.map submissionView submissions
+        )
 
 
 submissionView : Submission -> Element Msg

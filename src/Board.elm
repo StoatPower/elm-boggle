@@ -114,8 +114,8 @@ stageShuffle board =
             )
 
 
-isShuffling : Board -> Bool
-isShuffling board =
+diceAreRolling : Board -> Bool
+diceAreRolling board =
     board
         |> getCells
         |> List.any Cell.isRollingDie
