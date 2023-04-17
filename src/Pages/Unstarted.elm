@@ -3,15 +3,14 @@ module Pages.Unstarted exposing (..)
 import Element exposing (Element, centerX, centerY, column, el, text)
 import Element.Background as Background
 import Element.Font as Font
-import Game exposing (Game(..))
 import Message exposing (Msg(..))
-import RemoteData exposing (RemoteData(..), WebData)
-import Scorebook exposing (Scorebook)
+import RemoteData exposing (RemoteData(..))
+import Scorebook exposing (ScorebookData)
 import UI.Common exposing (standardButtonView)
 import UI.Palette exposing (..)
 
 
-view : WebData Scorebook -> Element Msg
+view : ScorebookData -> Element Msg
 view wordsData =
     let
         content =

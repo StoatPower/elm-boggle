@@ -1,6 +1,5 @@
 module Scorebook exposing (..)
 
-import Http
 import RemoteData exposing (WebData)
 import StringTrie as Trie exposing (Trie)
 
@@ -19,6 +18,10 @@ type alias Word =
 
 type alias ScoreResult =
     Result Score Score
+
+
+type alias ScorebookData =
+    WebData Scorebook
 
 
 minWordLength : Int
@@ -41,14 +44,6 @@ buildScorebook text =
                 Trie.insert word score trie
             )
             Trie.empty
-
-
-getScorebookSource : (WebData String -> msg) -> Cmd msg
-getScorebookSource message =
-    Http.get
-        { url = wordsUrl
-        , expect = Http.expectString (RemoteData.fromResult >> message)
-        }
 
 
 defaultWordScore : Word -> ( Word, Score )

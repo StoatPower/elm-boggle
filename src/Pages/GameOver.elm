@@ -1,16 +1,12 @@
 module Pages.GameOver exposing (..)
 
-import Cell exposing (Cell(..))
-import Die exposing (Die(..))
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
-import Game exposing (Game(..))
 import GameState exposing (GameState)
 import Message exposing (Msg(..))
-import RemoteData exposing (RemoteData(..))
 import Submissions exposing (Submission(..))
 import UI.Common exposing (scoreColor)
 import UI.Palette exposing (..)

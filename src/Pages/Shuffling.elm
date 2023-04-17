@@ -1,13 +1,9 @@
 module Pages.Shuffling exposing (..)
 
 import Board exposing (Board)
-import Cell exposing (Cell(..))
-import Die exposing (Die(..))
 import Element exposing (..)
 import Element.Font as Font
-import Game exposing (Game(..))
 import Message exposing (Msg(..))
-import RemoteData exposing (RemoteData(..))
 import Submissions exposing (Submission(..), Submissions)
 import UI.BoardView as BoardView
 import UI.Palette exposing (..)

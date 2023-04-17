@@ -1,6 +1,6 @@
 module GameState exposing (..)
 
-import Board exposing (Board, Grid)
+import Board exposing (Board)
 import Cell exposing (Cell(..), XY)
 import Die exposing (DieConfigIdx)
 import Scorebook exposing (Score, Scorebook, Word)

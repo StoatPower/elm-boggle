@@ -1,17 +1,12 @@
 module Pages.HighScores exposing (..)
 
-import Cell exposing (Cell(..))
-import Die exposing (Die(..))
-import Element as El exposing (..)
+import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
-import Game exposing (Game(..))
 import GameState exposing (Player, Rounds)
 import Message exposing (Msg(..))
-import RemoteData exposing (RemoteData(..))
 import Scorebook exposing (Score)
-import Submissions exposing (Submission(..))
 import UI.Common exposing (padNumber, scoreColor)
 import UI.Palette exposing (..)
 
