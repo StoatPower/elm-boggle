@@ -1,4 +1,4 @@
-module Die exposing (..)
+module Game.Die exposing (..)
 
 import Array exposing (Array)
 import List

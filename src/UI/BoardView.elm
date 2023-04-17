@@ -1,17 +1,14 @@
 module UI.BoardView exposing (..)
 
-import Board exposing (Board, Grid)
-import Cell exposing (Cell(..))
-import Die exposing (Die(..))
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
-import Game exposing (Game(..))
+import Game.Board as Board exposing (Board, Grid)
+import Game.Cell exposing (Cell(..))
+import Game.Die as Die exposing (Die(..))
 import Message exposing (Msg(..))
-import RemoteData exposing (RemoteData(..))
-import Submissions exposing (Submission(..))
 import UI.Palette exposing (..)
 
 
@@ -41,7 +38,7 @@ cellView cell =
     let
         ( cellAttrs, dieOpts, currentDie ) =
             case cell of
-                Cell ( x, y ) die ->
+                Cell _ die ->
                     ( []
                     , { attrs = [ Background.color shadowGreen ]
                       , onPress = Just (SelectDie cell)
@@ -49,7 +46,7 @@ cellView cell =
                     , die
                     )
 
-                AvailableCell ( x, y ) die ->
+                AvailableCell _ die ->
                     ( []
                     , { attrs = [ Background.color shadowGreen ]
                       , onPress = Just <| SelectDie cell
@@ -57,7 +54,7 @@ cellView cell =
                     , die
                     )
 
-                UnreachableCell ( x, y ) die ->
+                UnreachableCell _ die ->
                     ( []
                     , { attrs = [ Background.color shadowGreen ]
                       , onPress = Nothing
@@ -65,7 +62,7 @@ cellView cell =
                     , die
                     )
 
-                SelectedCell ( x, y ) die ->
+                SelectedCell _ die ->
                     ( []
                     , { attrs = [ Background.color lisbonBrown, Font.color atlantis ]
                       , onPress = Nothing
@@ -73,7 +70,7 @@ cellView cell =
                     , die
                     )
 
-                CurrentCell ( x, y ) die ->
+                CurrentCell _ die ->
                     ( []
                     , { attrs = [ Background.color <| atlantis, Font.color lisbonBrown ]
                       , onPress = Just UnselectDie
@@ -81,7 +78,7 @@ cellView cell =
                     , die
                     )
 
-                RollingDieCell ( x, y ) die ->
+                RollingDieCell _ die ->
                     ( []
                     , { attrs = [ Background.color shadowGreen ], onPress = Nothing }
                     , die

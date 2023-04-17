@@ -1,7 +1,5 @@
 module UI.PageView exposing (..)
 
-import Cell exposing (Cell(..))
-import Die exposing (Die(..))
 import Element exposing (..)
 import Game exposing (Game(..))
 import Message exposing (Msg(..))
@@ -10,10 +8,11 @@ import Pages.HighScores
 import Pages.InProgress
 import Pages.Shuffling
 import Pages.Unstarted
-import RemoteData exposing (RemoteData(..))
-import Submissions exposing (Submission(..))
 import UI.HeaderView as HeaderView
-import UI.Palette exposing (..)
+
+
+
+-- import UI.Palette exposing (..)
 
 
 view : Game -> Element Msg

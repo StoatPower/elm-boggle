@@ -3,9 +3,9 @@ module Pages.Unstarted exposing (..)
 import Element exposing (Element, centerX, centerY, column, el, text)
 import Element.Background as Background
 import Element.Font as Font
+import Game.Scorebook exposing (ScorebookData)
 import Message exposing (Msg(..))
 import RemoteData exposing (RemoteData(..))
-import Scorebook exposing (ScorebookData)
 import UI.Common exposing (standardButtonView)
 import UI.Palette exposing (..)
 

@@ -1,10 +1,10 @@
-module GameState exposing (..)
+module Game.GameState exposing (..)
 
-import Board exposing (Board)
-import Cell exposing (Cell(..), XY)
-import Die exposing (DieConfigIdx)
-import Scorebook exposing (Score, Scorebook, Word)
-import Submissions exposing (Submission(..), Submissions)
+import Game.Board as Board exposing (Board)
+import Game.Cell as Cell exposing (Cell(..), XY)
+import Game.Die exposing (DieConfigIdx)
+import Game.Scorebook exposing (Score, Scorebook, Word)
+import Game.Submissions as Submissions exposing (Submission(..), Submissions)
 
 
 type alias Player =

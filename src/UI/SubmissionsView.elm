@@ -1,15 +1,11 @@
 module UI.SubmissionsView exposing (..)
 
-import Cell exposing (Cell(..))
-import Die exposing (Die(..))
 import Element exposing (..)
 import Element.Border as Border
 import Element.Font as Font
-import Game exposing (Game(..))
+import Game.Scorebook as Scorebook
+import Game.Submissions as Submissions exposing (Submission(..), Submissions)
 import Message exposing (Msg(..))
-import RemoteData exposing (RemoteData(..))
-import Scorebook
-import Submissions exposing (Submission(..), Submissions)
 import UI.Common exposing (scoreColor)
 import UI.Palette exposing (..)
 

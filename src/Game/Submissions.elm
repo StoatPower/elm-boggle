@@ -1,6 +1,6 @@
-module Submissions exposing (..)
+module Game.Submissions exposing (..)
 
-import Scorebook exposing (Score, ScoreResult, Scorebook, Word)
+import Game.Scorebook as Scorebook exposing (Score, ScoreResult, Scorebook, Word)
 
 
 type Submission

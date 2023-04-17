@@ -4,8 +4,8 @@ import Element exposing (Attr, Element, centerX, centerY, el, height, px, text, 
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
+import Game.Scorebook exposing (Score)
 import Message exposing (Msg(..))
-import Scorebook exposing (Score)
 import UI.Palette exposing (..)
 
 

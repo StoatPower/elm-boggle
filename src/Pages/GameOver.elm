@@ -5,9 +5,9 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
-import GameState exposing (GameState)
+import Game.GameState exposing (GameState)
+import Game.Submissions as Submissions exposing (Submission(..))
 import Message exposing (Msg(..))
-import Submissions exposing (Submission(..))
 import UI.Common exposing (scoreColor)
 import UI.Palette exposing (..)
 

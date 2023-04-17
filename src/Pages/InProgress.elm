@@ -1,7 +1,7 @@
 module Pages.InProgress exposing (..)
 
 import Element exposing (..)
-import GameState exposing (GameState)
+import Game.GameState exposing (GameState)
 import Message exposing (Msg(..))
 import UI.BoardView as BoardView
 import UI.SelectionsView as SelectionsView

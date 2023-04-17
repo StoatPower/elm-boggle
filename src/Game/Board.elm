@@ -1,8 +1,8 @@
-module Board exposing (..)
+module Game.Board exposing (..)
 
-import Cell exposing (Cell(..), XY)
 import Dict exposing (Dict)
-import Die exposing (Die(..))
+import Game.Cell as Cell exposing (Cell(..), XY)
+import Game.Die as Die exposing (Die(..))
 import List.Extra as LEx
 import Random
 

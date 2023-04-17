@@ -1,17 +1,12 @@
 module UI.SelectionsView exposing (..)
 
-import Cell exposing (Cell(..))
-import Die exposing (Die(..))
 import Element exposing (..)
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
-import Game exposing (Game(..))
-import GameState exposing (Selections)
+import Game.GameState as GameState exposing (Selections)
+import Game.Scorebook as Scorebook
 import Message exposing (Msg(..))
-import RemoteData exposing (RemoteData(..))
-import Scorebook
-import Submissions exposing (Submission(..))
 import UI.Palette exposing (..)
 
 

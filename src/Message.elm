@@ -1,9 +1,9 @@
 module Message exposing (..)
 
-import Cell exposing (Cell(..), XY)
-import GameState exposing (Player)
+import Game.Cell exposing (Cell(..), XY)
+import Game.GameState exposing (Player)
+import Game.Scorebook exposing (Score)
 import RemoteData exposing (WebData)
-import Scorebook exposing (Score)
 import Time
 
 

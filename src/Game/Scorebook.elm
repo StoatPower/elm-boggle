@@ -1,4 +1,4 @@
-module Scorebook exposing (..)
+module Game.Scorebook exposing (..)
 
 import RemoteData exposing (WebData)
 import StringTrie as Trie exposing (Trie)

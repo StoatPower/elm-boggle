@@ -4,9 +4,9 @@ import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
-import GameState exposing (Player, Rounds)
+import Game.GameState exposing (Player, Rounds)
+import Game.Scorebook exposing (Score)
 import Message exposing (Msg(..))
-import Scorebook exposing (Score)
 import UI.Common exposing (padNumber, scoreColor)
 import UI.Palette exposing (..)
 

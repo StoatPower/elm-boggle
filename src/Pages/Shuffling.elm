@@ -1,10 +1,10 @@
 module Pages.Shuffling exposing (..)
 
-import Board exposing (Board)
 import Element exposing (..)
 import Element.Font as Font
+import Game.Board exposing (Board)
+import Game.Submissions exposing (Submission(..), Submissions)
 import Message exposing (Msg(..))
-import Submissions exposing (Submission(..), Submissions)
 import UI.BoardView as BoardView
 import UI.Palette exposing (..)
 import UI.SubmissionsView as SubmissionsView

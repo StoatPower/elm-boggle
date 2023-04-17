@@ -1,6 +1,6 @@
-module Cell exposing (..)
+module Game.Cell exposing (..)
 
-import Die exposing (Die(..))
+import Game.Die as Die exposing (Die(..))
 
 
 type alias XY =

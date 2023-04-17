@@ -1,15 +1,15 @@
 module Game exposing (..)
 
-import Board
-import Cell exposing (Cell, XY)
-import Die exposing (DieConfigIdx)
-import GameState exposing (GameState, Player)
+import Game.Board as Board
+import Game.Cell as Cell exposing (Cell, XY)
+import Game.Die as Die exposing (DieConfigIdx)
+import Game.GameState as GameState exposing (GameState, Player)
+import Game.Scorebook as Scorebook exposing (Score, Scorebook)
 import Http
 import List.Extra as LEx
 import Message exposing (Msg(..))
 import Random
 import RemoteData exposing (RemoteData(..), WebData)
-import Scorebook exposing (Score, Scorebook)
 import Time
 
 
