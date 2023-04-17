@@ -1,4 +1,4 @@
-module Palette exposing (..)
+module UI.Palette exposing (..)
 
 import Element as El exposing (Color)
 
