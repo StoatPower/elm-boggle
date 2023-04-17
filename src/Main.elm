@@ -2,20 +2,21 @@ module Main exposing (..)
 
 import Board exposing (Board, Grid)
 import Browser exposing (Document)
-import Cell exposing (Cell(..), XY)
+import Cell exposing (Cell(..))
 import Die exposing (Die(..))
 import Element as El exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
+import Game exposing (Game(..))
 import GameState exposing (GameState, Player, Rounds, Selections)
 import List.Extra as LEx
 import Message exposing (Msg(..))
 import Palette exposing (..)
 import Random
 import RemoteData exposing (RemoteData(..), WebData)
-import Scorebook exposing (Score, Scorebook, Word)
+import Scorebook exposing (Score, Scorebook)
 import Submissions exposing (Submission(..), Submissions)
 import Time
 
@@ -28,14 +29,6 @@ main =
         , update = update
         , subscriptions = subscriptions
         }
-
-
-type Game
-    = Unstarted (WebData Scorebook)
-    | Shuffling GameState
-    | InProgress GameState
-    | GameOver GameState
-    | HighScores GameState
 
 
 type alias Model =
