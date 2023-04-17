@@ -47,9 +47,11 @@ type alias GameState =
     { board : Board
     , selections : Selections
     , submissions : Submissions
+    , player : Maybe Player
     , rounds : Rounds
     , scorebook : Scorebook
     , elapsedSeconds : Int
+    , allowedSeconds : Int
     }
 
 
@@ -58,19 +60,12 @@ initGameState scorebook board =
     { board = board
     , selections = []
     , submissions = []
+    , player = Nothing
     , rounds = []
     , scorebook = scorebook
     , elapsedSeconds = 0
+    , allowedSeconds = 180
     }
-
-
-
--- startTimer : GameState -> GameState
--- startTimer gameState =
---     let
---         now = Time.now
---     in
---     {gameState | timeStart = Time.now }
 
 
 type Game
@@ -100,6 +95,7 @@ type Msg
     | SelectDie Cell
     | UnselectDie
     | SubmitWord
+    | PlayerInputChange String
     | Tick Time.Posix
 
 
@@ -267,10 +263,18 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
+        PlayerInputChange name ->
+            case model of
+                GameOver gameState ->
+                    ( GameOver { gameState | player = Just name }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
+
         Tick _ ->
             case model of
                 InProgress gameState ->
-                    if gameState.elapsedSeconds < 180 then
+                    if gameState.elapsedSeconds < gameState.allowedSeconds then
                         ( InProgress
                             { gameState | elapsedSeconds = gameState.elapsedSeconds + 1 }
                         , Cmd.none
@@ -322,8 +326,8 @@ selectionsToWord selections =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model of
-        InProgress { elapsedSeconds } ->
-            if elapsedSeconds < 180 then
+        InProgress { elapsedSeconds, allowedSeconds } ->
+            if elapsedSeconds <= allowedSeconds then
                 Time.every 1000 Tick
 
             else
@@ -369,7 +373,7 @@ view model =
                                 ]
 
                         GameOver gameState ->
-                            el [ centerX, centerY ] <| text "Game Over"
+                            gameOverView gameState
                 ]
         ]
     }
@@ -529,6 +533,77 @@ submissionView submission =
 
         InvalidWord word score ->
             viewFn word score [ Font.color red ]
+
+
+gameOverView : GameState -> Element Msg
+gameOverView gameState =
+    let
+        finalScore =
+            gameState.submissions
+                |> Submissions.tallySubmissions
+
+        finalScoreColor =
+            if finalScore < 0 then
+                Font.color red
+
+            else if finalScore == 0 then
+                Font.color chiffon
+
+            else
+                Font.color atlantis
+    in
+    column
+        [ centerX
+        , centerY
+        , spacingXY 0 40
+        ]
+        [ el
+            [ Font.bold
+            , Font.size 64
+            , Font.color red
+            , Font.letterSpacing 8
+            ]
+          <|
+            text "GAME OVER"
+        , row
+            [ centerX
+            , Font.size 24
+            , Font.letterSpacing 2
+            , spacingXY 25 0
+            , Border.dotted
+            , Border.widthEach { bottom = 2, top = 0, left = 0, right = 0 }
+            , Border.color chiffon
+            , paddingXY 0 10
+            ]
+            [ el [ Font.color chiffon ] <| text "Final Score"
+            , el [ finalScoreColor ] <| text (String.fromInt finalScore)
+            ]
+        , row
+            [ centerX ]
+            [ Input.text
+                [ Font.center
+                , Font.letterSpacing 1.5
+                , Background.color chiffon
+                , Font.color lisbonBrown
+                , Border.roundEach { topLeft = 5, bottomLeft = 5, topRight = 0, bottomRight = 0 }
+                ]
+                { onChange = PlayerInputChange
+                , text = Maybe.withDefault "" gameState.player
+                , placeholder = Just <| Input.placeholder [ Font.center ] <| text "Enter Name"
+                , label = Input.labelHidden "Enter Name"
+                }
+            , Input.button
+                [ Background.color atlantis
+                , Font.color lisbonBrown
+                , Font.letterSpacing 1.5
+                , height fill
+                , Border.roundEach { topLeft = 0, bottomLeft = 0, topRight = 5, bottomRight = 5 }
+                ]
+                { onPress = Nothing
+                , label = el [ paddingXY 10 0 ] <| text "Submit"
+                }
+            ]
+        ]
 
 
 boardView : Board -> Element Msg
