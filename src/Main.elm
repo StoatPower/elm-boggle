@@ -496,7 +496,15 @@ unstartedView wordsData =
                     ]
 
                 Loading ->
-                    [ text "Loading words dictionary..."
+                    [ el
+                        [ centerX
+                        , centerY
+                        , Font.color chiffon
+                        , Font.letterSpacing 2
+                        , Font.size 22
+                        ]
+                      <|
+                        text "Loading words dictionary..."
                     ]
 
                 Success _ ->
