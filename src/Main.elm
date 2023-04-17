@@ -9,6 +9,7 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
+import GameState exposing (GameState, Player, Rounds, Selections)
 import List.Extra as LEx
 import Palette exposing (..)
 import Random
@@ -26,53 +27,6 @@ main =
         , update = update
         , subscriptions = subscriptions
         }
-
-
-type alias Player =
-    String
-
-
-type alias Rounds =
-    List ( Player, Score )
-
-
-type alias Selections =
-    List Cell
-
-
-type alias GameState =
-    { board : Board
-    , selections : Selections
-    , submissions : Submissions
-    , player : Maybe Player
-    , rounds : Rounds
-    , scorebook : Scorebook
-    , remainingSeconds : Int
-    , remainingShuffleMillis : Int
-    }
-
-
-initGameState : Scorebook -> Board -> GameState
-initGameState scorebook board =
-    { board = board
-    , selections = []
-    , submissions = []
-    , player = Nothing
-    , rounds = []
-    , scorebook = scorebook
-    , remainingSeconds = defaultTimeSeconds
-    , remainingShuffleMillis = shuffleForMillis
-    }
-
-
-shuffleForMillis : Int
-shuffleForMillis =
-    100
-
-
-defaultTimeSeconds : Int
-defaultTimeSeconds =
-    180
 
 
 type Game
@@ -124,14 +78,9 @@ update msg model =
                     ( model, Cmd.none )
 
         ScorebookSourceResponse sbData ->
-            let
-                scorebookData =
-                    sbData
-                        |> RemoteData.map Scorebook.buildScorebook
-            in
             case model of
                 Unstarted _ ->
-                    ( Unstarted scorebookData, Cmd.none )
+                    ( Unstarted <| RemoteData.map Scorebook.buildScorebook sbData, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -141,9 +90,7 @@ update msg model =
                 Unstarted (Success words) ->
                     let
                         gameState =
-                            Board.init
-                                |> Board.stageShuffle
-                                |> initGameState words
+                            GameState.init words
                     in
                     ( Shuffling gameState
                     , gameState.board
@@ -155,17 +102,8 @@ update msg model =
 
                 HighScores gameState ->
                     let
-                        newBoard =
-                            Board.stageShuffle gameState.board
-
                         newGameState =
-                            { gameState
-                                | board = newBoard
-                                , selections = []
-                                , submissions = []
-                                , remainingSeconds = defaultTimeSeconds
-                                , player = Nothing
-                            }
+                            GameState.reInit gameState
                     in
                     ( Shuffling newGameState
                     , newGameState.board
@@ -178,15 +116,7 @@ update msg model =
         NewDieFace key newFace ->
             case model of
                 Shuffling gameState ->
-                    let
-                        newBoard =
-                            gameState.board
-                                |> Board.setNewDieFaceForCell key newFace
-
-                        newGameState =
-                            { gameState | board = newBoard }
-                    in
-                    ( Shuffling newGameState, Cmd.none )
+                    ( Shuffling <| GameState.newDieFace key newFace gameState, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -194,15 +124,7 @@ update msg model =
         DiceSwapped ( xy1, xy2 ) ->
             case model of
                 Shuffling gameState ->
-                    let
-                        newBoard =
-                            gameState.board
-                                |> Board.swapCellDice xy1 xy2
-
-                        newGameState =
-                            { gameState | board = newBoard }
-                    in
-                    ( Shuffling newGameState, Cmd.none )
+                    ( Shuffling <| GameState.swapDice xy1 xy2 gameState, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -210,23 +132,7 @@ update msg model =
         SelectDie cell ->
             case model of
                 InProgress gameState ->
-                    let
-                        lastSelected =
-                            List.head gameState.selections
-
-                        newBoard =
-                            gameState.board
-                                |> Board.makeNewSelection
-                                    cell
-                                    lastSelected
-
-                        newSelections =
-                            cell :: gameState.selections
-
-                        newGameState =
-                            { gameState | board = newBoard, selections = newSelections }
-                    in
-                    ( InProgress newGameState, Cmd.none )
+                    ( InProgress <| GameState.selectDie cell gameState, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -234,28 +140,7 @@ update msg model =
         UnselectDie ->
             case model of
                 InProgress gameState ->
-                    let
-                        ( newBoard, newSelections ) =
-                            case gameState.selections of
-                                [] ->
-                                    ( gameState.board, [] )
-
-                                h :: [] ->
-                                    ( gameState.board
-                                        |> Board.undoLastSelection h Nothing
-                                    , []
-                                    )
-
-                                h :: n :: t ->
-                                    ( gameState.board
-                                        |> Board.undoLastSelection h (Just n)
-                                    , n :: t
-                                    )
-
-                        newGameState =
-                            { gameState | board = newBoard, selections = newSelections }
-                    in
-                    ( InProgress newGameState, Cmd.none )
+                    ( InProgress <| GameState.unselectDie gameState, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -263,24 +148,7 @@ update msg model =
         SubmitWord ->
             case model of
                 InProgress gameState ->
-                    let
-                        newBoard =
-                            Board.resetAllCells gameState.board
-
-                        newSubmissions =
-                            gameState.submissions
-                                |> Submissions.submitWord
-                                    (selectionsToWord gameState.selections)
-                                    gameState.scorebook
-
-                        newGameState =
-                            { gameState
-                                | board = newBoard
-                                , selections = []
-                                , submissions = newSubmissions
-                            }
-                    in
-                    ( InProgress newGameState, Cmd.none )
+                    ( InProgress <| GameState.submitWord gameState, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -288,7 +156,7 @@ update msg model =
         PlayerInputChange name ->
             case model of
                 GameOver gameState ->
-                    ( GameOver { gameState | player = Just name }, Cmd.none )
+                    ( GameOver <| GameState.updatePlayer name gameState, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -296,15 +164,7 @@ update msg model =
         SubmitPlayerScore player finalScore ->
             case model of
                 GameOver gameState ->
-                    let
-                        newRounds =
-                            ( player, finalScore ) :: gameState.rounds
-                    in
-                    ( HighScores
-                        { gameState
-                            | rounds = newRounds
-                            , remainingShuffleMillis = shuffleForMillis
-                        }
+                    ( HighScores <| GameState.submitPlayerScore player finalScore gameState
                     , Cmd.none
                     )
 
@@ -314,34 +174,25 @@ update msg model =
         Tick _ ->
             case model of
                 Shuffling gameState ->
-                    case ( gameState.remainingShuffleMillis > 0, Board.diceAreRolling gameState.board ) of
-                        ( True, True ) ->
-                            ( Shuffling
-                                { gameState | remainingShuffleMillis = gameState.remainingShuffleMillis - 1 }
-                            , Cmd.none
+                    case GameState.countdownShuffleTimer gameState of
+                        Just ( newGameState, True ) ->
+                            ( Shuffling newGameState
+                            , newGameState.board |> rollDiceCmd
                             )
 
-                        ( True, False ) ->
-                            ( Shuffling
-                                { gameState | remainingShuffleMillis = gameState.remainingShuffleMillis - 1 }
-                            , gameState.board |> rollDiceCmd
-                            )
+                        Just ( newGameState, False ) ->
+                            ( Shuffling newGameState, Cmd.none )
 
-                        ( False, True ) ->
-                            ( InProgress gameState, Cmd.none )
-
-                        ( False, False ) ->
+                        Nothing ->
                             ( InProgress gameState, Cmd.none )
 
                 InProgress gameState ->
-                    if gameState.remainingSeconds > 0 then
-                        ( InProgress
-                            { gameState | remainingSeconds = gameState.remainingSeconds - 1 }
-                        , Cmd.none
-                        )
+                    case GameState.countdownGameTimer gameState of
+                        Just newGameState ->
+                            ( InProgress newGameState, Cmd.none )
 
-                    else
-                        ( GameOver gameState, Cmd.none )
+                        Nothing ->
+                            ( GameOver gameState, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -383,14 +234,6 @@ rollDiceCmd board =
         |> newDieFaceCmds
         |> LEx.interweave diceSwappedCmds
         |> Cmd.batch
-
-
-selectionsToWord : Selections -> Word
-selectionsToWord selections =
-    selections
-        |> List.reverse
-        |> List.filterMap Cell.getDieFace
-        |> String.join ""
 
 
 subscriptions : Model -> Sub Msg
@@ -551,7 +394,7 @@ selectionsView selections =
         ]
         [ el [ width <| px 65 ] <| text ">>"
         , selections
-            |> selectionsToWord
+            |> GameState.selectionsToWord
             |> text
             |> el [ Font.letterSpacing 4, paddingXY 10 0, centerX ]
         , el [ alignRight ] <| submitWordBtn selections
