@@ -1,10 +1,8 @@
 module Die exposing (..)
 
 import Array exposing (Array)
-import List exposing (indexedMap, length)
-import List.Extra exposing (getAt)
-import Random exposing (Generator, andThen, map, step)
-import Set exposing (Set, empty, insert)
+import List
+import Random
 
 
 sides : Int
@@ -12,16 +10,24 @@ sides =
     6
 
 
-type Die
-    = Die Int DieConfig
+type alias DieConfigIdx =
+    Int
+
+
+type alias DieId =
+    Int
 
 
 type alias DieConfig =
-    Array String
+    Array Char
 
 
-dieConfigs : List DieConfig
-dieConfigs =
+type Die
+    = Die DieId DieConfigIdx DieConfig
+
+
+dieIdsAndConfigs : List ( DieId, DieConfig )
+dieIdsAndConfigs =
     [ "aaafrs"
     , "aaeeee"
     , "aafirs"
@@ -48,13 +54,26 @@ dieConfigs =
     , "nootuw"
     , "ooottu"
     ]
-        |> List.map (String.split "")
-        |> List.map Array.fromList
+        |> List.foldl
+            (\cfg ( id, cfgs ) ->
+                -- 1. increment our index for next config's id
+                -- 2. pair our current id with initialized die config and push to list
+                ( id + 1, ( id, initDieConfig cfg ) :: cfgs )
+            )
+            ( 1, [] )
+        |> Tuple.second
+
+
+initDieConfig : String -> Array Char
+initDieConfig unprocessedConfig =
+    unprocessedConfig
+        |> String.toList
+        |> Array.fromList
 
 
 setFace : Int -> Die -> Die
-setFace newFace (Die _ config) =
-    Die newFace config
+setFace newFace (Die id _ config) =
+    Die id newFace config
 
 
 roll : Random.Generator Int
@@ -64,13 +83,14 @@ roll =
 
 defaultDice : List Die
 defaultDice =
-    dieConfigs
-        |> List.map (Die 0)
+    dieIdsAndConfigs
+        |> List.map (\( id, cfg ) -> Die id 0 cfg)
 
 
 getFace : Die -> Maybe String
-getFace (Die index config) =
+getFace (Die _ index config) =
     Array.get index config
+        |> Maybe.map String.fromChar
         |> Maybe.map augmentQ
 
 
