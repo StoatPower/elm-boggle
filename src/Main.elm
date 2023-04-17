@@ -830,11 +830,27 @@ cellView cell =
 dieView : { opts | attrs : List (Attr () Msg), onPress : Maybe Msg } -> Die -> Element Msg
 dieView opts die =
     let
+        id =
+            die
+                |> Die.getId
+                |> String.fromInt
+
         content =
             die
                 |> Die.getFace
                 |> Maybe.map text
                 |> Maybe.withDefault none
+
+        idView =
+            el
+                [ Font.size 8
+                , alignLeft
+                , alignTop
+                , moveDown 5
+                , moveRight 5
+                ]
+            <|
+                text id
     in
     Input.button
         ([ height fill
@@ -842,12 +858,17 @@ dieView opts die =
          , centerX
          , centerY
          , Border.rounded 8
+         , inFront idView
          ]
             ++ opts.attrs
         )
         { onPress = opts.onPress
         , label =
-            el [ centerX, centerY ] <|
+            el
+                [ centerX
+                , centerY
+                ]
+            <|
                 content
         }
 

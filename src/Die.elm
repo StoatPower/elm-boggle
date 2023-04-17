@@ -71,20 +71,15 @@ initDieConfig unprocessedConfig =
         |> Array.fromList
 
 
-setFace : Int -> Die -> Die
-setFace newFace (Die id _ config) =
-    Die id newFace config
-
-
-roll : Random.Generator Int
-roll =
-    Random.int 0 (sides - 1)
-
-
 defaultDice : List Die
 defaultDice =
     dieIdsAndConfigs
         |> List.map (\( id, cfg ) -> Die id 0 cfg)
+
+
+setFace : DieConfigIdx -> Die -> Die
+setFace newFace (Die id _ config) =
+    Die id newFace config
 
 
 getFace : Die -> Maybe String
@@ -94,6 +89,11 @@ getFace (Die _ index config) =
         |> Maybe.map augmentQ
 
 
+getId : Die -> DieId
+getId (Die id _ _) =
+    id
+
+
 augmentQ : String -> String
 augmentQ char =
     if char == "q" then
@@ -101,3 +101,8 @@ augmentQ char =
 
     else
         char
+
+
+roll : Random.Generator Int
+roll =
+    Random.int 0 (sides - 1)
