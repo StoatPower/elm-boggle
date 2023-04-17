@@ -50,8 +50,7 @@ type alias GameState =
     , player : Maybe Player
     , rounds : Rounds
     , scorebook : Scorebook
-    , elapsedSeconds : Int
-    , allowedSeconds : Int
+    , remainingSeconds : Int
     }
 
 
@@ -63,9 +62,13 @@ initGameState scorebook board =
     , player = Nothing
     , rounds = []
     , scorebook = scorebook
-    , elapsedSeconds = 0
-    , allowedSeconds = 180
+    , remainingSeconds = defaultTime
     }
+
+
+defaultTime : Int
+defaultTime =
+    180
 
 
 type Game
@@ -155,7 +158,7 @@ update msg model =
                                 | board = newBoard
                                 , selections = []
                                 , submissions = []
-                                , elapsedSeconds = 0
+                                , remainingSeconds = defaultTime
                                 , player = Nothing
                             }
                     in
@@ -288,9 +291,9 @@ update msg model =
         Tick _ ->
             case model of
                 InProgress gameState ->
-                    if gameState.elapsedSeconds < gameState.allowedSeconds then
+                    if gameState.remainingSeconds > 0 then
                         ( InProgress
-                            { gameState | elapsedSeconds = gameState.elapsedSeconds + 1 }
+                            { gameState | remainingSeconds = gameState.remainingSeconds - 1 }
                         , Cmd.none
                         )
 
@@ -340,8 +343,8 @@ selectionsToWord selections =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model of
-        InProgress { elapsedSeconds, allowedSeconds } ->
-            if elapsedSeconds <= allowedSeconds then
+        InProgress { remainingSeconds } ->
+            if remainingSeconds >= 0 then
                 Time.every 1000 Tick
 
             else
@@ -370,17 +373,16 @@ view model =
                         Shuffling { board, submissions } ->
                             column [ centerX, centerY ]
                                 [ boardView board
-
-                                -- , submissionsView submissions
+                                , submissionsView submissions
                                 ]
 
-                        InProgress { board, selections, submissions, elapsedSeconds } ->
+                        InProgress { board, selections, submissions, remainingSeconds } ->
                             column
                                 [ centerX
                                 , centerY
                                 , spacingXY 0 15
                                 ]
-                                [ timerView elapsedSeconds
+                                [ timerView remainingSeconds
                                 , el [ onLeft <| submissionsView submissions ] <|
                                     boardView board
                                 , inputView model
