@@ -3,12 +3,10 @@ module Main exposing (..)
 import Board exposing (Board, Grid)
 import Browser exposing (Document)
 import Cell exposing (Cell(..), XY)
-import Dict exposing (Dict)
 import Die exposing (Die(..))
 import Element as El exposing (..)
 import Element.Background as Background
 import Element.Border as Border
-import Element.Events as Events exposing (onClick)
 import Element.Font as Font
 import Element.Input as Input
 import List.Extra as LEx
@@ -17,7 +15,6 @@ import Random
 import RemoteData exposing (RemoteData(..), WebData)
 import Scorebook exposing (Score, Scorebook, Word)
 import Submissions exposing (Submission(..), Submissions)
-import Task
 import Time
 
 
@@ -95,6 +92,7 @@ type Msg
     | ManuallyDownloadWords
     | ScorebookSourceResponse (WebData String)
     | ShuffleBoard
+    | DiceSwapped ( XY, XY )
     | NewDieFace XY Int
     | SelectDie Cell
     | UnselectDie
@@ -142,7 +140,7 @@ update msg model =
                     in
                     ( Shuffling gameState
                     , gameState.board
-                        |> rollDiceCmds
+                        |> rollDiceCmd
                     )
 
                 Unstarted _ ->
@@ -164,7 +162,7 @@ update msg model =
                     in
                     ( Shuffling newGameState
                     , newGameState.board
-                        |> rollDiceCmds
+                        |> rollDiceCmd
                     )
 
                 _ ->
@@ -186,6 +184,19 @@ update msg model =
 
                     else
                         ( InProgress newGameState, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        DiceSwapped ( xy1, xy2 ) ->
+            case model of
+                InProgress gameState ->
+                    let
+                        newBoard =
+                            gameState.board
+                                |> Board.swapCellDice xy1 xy2
+                    in
+                    ( InProgress { gameState | board = newBoard }, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -317,18 +328,28 @@ lastTwoSelections selections =
             ( Just first, Just second )
 
 
-rollDiceCmds : Board -> Cmd Msg
-rollDiceCmds board =
+rollDiceCmd : Board -> Cmd Msg
+rollDiceCmd board =
+    let
+        newDieFaceCmds cells =
+            cells
+                |> List.map
+                    (\cell ->
+                        let
+                            cmd =
+                                NewDieFace <| Cell.getKey cell
+                        in
+                        Random.generate cmd Die.roll
+                    )
+
+        diceSwappedCmds =
+            List.repeat (Board.size board * 2)
+                (Random.generate DiceSwapped Board.randomSwap)
+    in
     board
-        |> Dict.values
-        |> List.map
-            (\cell ->
-                let
-                    cmd =
-                        NewDieFace <| Cell.getKey cell
-                in
-                Random.generate cmd Die.roll
-            )
+        |> Board.getCells
+        |> newDieFaceCmds
+        |> LEx.interweave diceSwappedCmds
         |> Cmd.batch
 
 

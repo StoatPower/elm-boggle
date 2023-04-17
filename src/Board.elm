@@ -4,6 +4,7 @@ import Cell exposing (Cell(..), XY)
 import Dict exposing (Dict)
 import Die exposing (Die(..))
 import List.Extra as LEx
+import Random
 
 
 type alias Board =
@@ -17,6 +18,11 @@ type alias Grid =
 dimensions : Int
 dimensions =
     5
+
+
+size : Board -> Int
+size board =
+    Dict.size board
 
 
 init : Board
@@ -35,11 +41,58 @@ init =
         |> Dict.fromList
 
 
+swapCellDice : XY -> XY -> Board -> Board
+swapCellDice key1 key2 board =
+    if key1 /= key2 then
+        let
+            maybeDie1 =
+                getCell key1 board
+                    |> Maybe.map Cell.getDie
+
+            maybeDie2 =
+                getCell key2 board
+                    |> Maybe.map Cell.getDie
+        in
+        case ( maybeDie1, maybeDie2 ) of
+            ( Just die1, Just die2 ) ->
+                board
+                    |> Dict.update key1 (Maybe.map <| Cell.setDie die2)
+                    |> Dict.update key2 (Maybe.map <| Cell.setDie die1)
+
+            ( _, _ ) ->
+                board
+
+    else
+        board
+
+
+randomSwap : Random.Generator ( XY, XY )
+randomSwap =
+    Random.pair randomXY randomXY
+
+
+randomXY : Random.Generator XY
+randomXY =
+    Random.pair
+        (Random.int 0 (dimensions - 1))
+        (Random.int 0 (dimensions - 1))
+
+
 toGrid : Board -> Grid
 toGrid board =
     board
         |> Dict.values
         |> LEx.groupsOf dimensions
+
+
+getCell : XY -> Board -> Maybe Cell
+getCell xy board =
+    Dict.get xy board
+
+
+getCells : Board -> List Cell
+getCells board =
+    Dict.values board
 
 
 setNewDieFaceForCell : XY -> Int -> Board -> Board
@@ -64,7 +117,7 @@ stageShuffle board =
 isShuffling : Board -> Bool
 isShuffling board =
     board
-        |> Dict.values
+        |> getCells
         |> List.any Cell.isRollingDie
 
 

@@ -1,7 +1,10 @@
 module Die exposing (..)
 
 import Array exposing (Array)
-import Random
+import List exposing (indexedMap, length)
+import List.Extra exposing (getAt)
+import Random exposing (Generator, andThen, map, step)
+import Set exposing (Set, empty, insert)
 
 
 sides : Int
@@ -57,14 +60,6 @@ setFace newFace (Die _ config) =
 roll : Random.Generator Int
 roll =
     Random.int 0 (sides - 1)
-
-
-defaultDie : Die
-defaultDie =
-    "aaaaaa"
-        |> String.split ""
-        |> Array.fromList
-        |> Die 0
 
 
 defaultDice : List Die

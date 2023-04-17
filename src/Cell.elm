@@ -69,6 +69,28 @@ getDieFace cell =
         |> Die.getFace
 
 
+setDie : Die -> Cell -> Cell
+setDie die cell =
+    case cell of
+        Cell xy _ ->
+            Cell xy die
+
+        AvailableCell xy _ ->
+            AvailableCell xy die
+
+        UnreachableCell xy _ ->
+            UnreachableCell xy die
+
+        SelectedCell xy _ ->
+            SelectedCell xy die
+
+        CurrentCell xy _ ->
+            CurrentCell xy die
+
+        RollingDieCell xy _ ->
+            RollingDieCell xy die
+
+
 isRollingDie : Cell -> Bool
 isRollingDie cell =
     case cell of
