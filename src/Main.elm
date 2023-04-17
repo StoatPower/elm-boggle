@@ -11,6 +11,7 @@ import Element.Font as Font
 import Element.Input as Input
 import GameState exposing (GameState, Player, Rounds, Selections)
 import List.Extra as LEx
+import Message exposing (Msg(..))
 import Palette exposing (..)
 import Random
 import RemoteData exposing (RemoteData(..), WebData)
@@ -46,21 +47,6 @@ init =
     ( Unstarted Loading
     , Scorebook.getScorebookSource ScorebookSourceResponse
     )
-
-
-type Msg
-    = NoOp
-    | ManuallyDownloadWords
-    | ScorebookSourceResponse (WebData String)
-    | ShuffleBoard
-    | DiceSwapped ( XY, XY )
-    | NewDieFace XY Int
-    | SelectDie Cell
-    | UnselectDie
-    | SubmitWord
-    | PlayerInputChange String
-    | SubmitPlayerScore Player Score
-    | Tick Time.Posix
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
