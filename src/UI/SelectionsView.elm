@@ -48,7 +48,11 @@ submitWordBtn selections =
     let
         ( attrs, msg ) =
             if canSubmitSelections selections then
-                ( [ Font.color atlantis ], Just SubmitWord )
+                ( [ Font.color atlantis
+                  , mouseOver [ Font.color <| hoverColor atlantis ]
+                  ]
+                , Just SubmitWord
+                )
 
             else
                 ( [ Font.color chiffon ], Nothing )

@@ -12,35 +12,44 @@ import Message exposing (Msg(..))
 import UI.Palette exposing (..)
 
 
-view : Board -> Element Msg
-view board =
+view : { a | shuffling : Bool } -> Board -> Element Msg
+view opts board =
     board
         |> Board.toGrid
-        |> gridView
+        |> gridView opts
 
 
-gridView : Grid -> Element Msg
-gridView grid =
+gridView : { a | shuffling : Bool } -> Grid -> Element Msg
+gridView opts grid =
     grid
-        |> List.map rowView
+        |> List.map (rowView opts)
         |> column [ Background.color chiffon ]
 
 
-rowView : List Cell -> Element Msg
-rowView cells =
+rowView : { a | shuffling : Bool } -> List Cell -> Element Msg
+rowView opts cells =
     cells
-        |> List.map cellView
+        |> List.map (cellView opts)
         |> row [ Background.color nero, paddingXY 0 5, spacingXY 10 0 ]
 
 
-cellView : Cell -> Element Msg
-cellView cell =
+cellView : { a | shuffling : Bool } -> Cell -> Element Msg
+cellView opts cell =
     let
         ( cellAttrs, dieOpts, currentDie ) =
             case cell of
                 Cell _ die ->
                     ( []
-                    , { attrs = [ Background.color shadowGreen ]
+                    , { attrs =
+                            [ Background.color shadowGreen
+                            , mouseOver
+                                [ if opts.shuffling then
+                                    Background.color shadowGreen
+
+                                  else
+                                    Background.color atlantis
+                                ]
+                            ]
                       , onPress = Just (SelectDie cell)
                       }
                     , die
@@ -48,7 +57,12 @@ cellView cell =
 
                 AvailableCell _ die ->
                     ( []
-                    , { attrs = [ Background.color shadowGreen ]
+                    , { attrs =
+                            [ Background.color shadowGreen
+                            , mouseOver
+                                [ Background.color atlantis
+                                ]
+                            ]
                       , onPress = Just <| SelectDie cell
                       }
                     , die
@@ -72,7 +86,14 @@ cellView cell =
 
                 CurrentCell _ die ->
                     ( []
-                    , { attrs = [ Background.color <| atlantis, Font.color lisbonBrown ]
+                    , { attrs =
+                            [ Background.color <| atlantis
+                            , Font.color lisbonBrown
+                            , mouseOver
+                                [ Background.color <| hoverColor atlantis
+                                , Font.color <| hoverColor lisbonBrown
+                                ]
+                            ]
                       , onPress = Just UnselectDie
                       }
                     , die

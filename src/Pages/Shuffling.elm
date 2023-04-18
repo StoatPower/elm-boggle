@@ -22,6 +22,6 @@ view board submissions =
           <|
             text " "
         , el [ onLeft <| SubmissionsView.view submissions ] <|
-            BoardView.view board
+            BoardView.view { shuffling = True } board
         , el [ height <| px 32, width fill ] none
         ]

@@ -65,6 +65,9 @@ view gameState =
                 , Font.letterSpacing 1.5
                 , height fill
                 , Border.roundEach { topLeft = 0, bottomLeft = 0, topRight = 5, bottomRight = 5 }
+                , mouseOver
+                    [ Background.color <| hoverColor atlantis
+                    ]
                 ]
                 { onPress =
                     case gameState.player of

@@ -18,6 +18,6 @@ view { board, selections, submissions, remainingSeconds } =
         ]
         [ TimerView.view remainingSeconds
         , el [ onLeft <| SubmissionsView.view submissions ] <|
-            BoardView.view board
+            BoardView.view { shuffling = False } board
         , SelectionsView.view selections
         ]
