@@ -4,6 +4,8 @@ import Element exposing (..)
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
+import Game.Cell as Cell
+import Game.Die as Die
 import Game.GameState as GameState exposing (Selections)
 import Game.Scorebook as Scorebook
 import Message exposing (Msg(..))
@@ -45,7 +47,7 @@ submitWordBtn : Selections -> Element Msg
 submitWordBtn selections =
     let
         ( attrs, msg ) =
-            if List.length selections >= Scorebook.minWordLength then
+            if canSubmitSelections selections then
                 ( [ Font.color atlantis ], Just SubmitWord )
 
             else
@@ -56,3 +58,16 @@ submitWordBtn selections =
         { onPress = msg
         , label = el [ centerX, centerY, Font.letterSpacing 1.5 ] <| text "Submit"
         }
+
+
+canSubmitSelections : Selections -> Bool
+canSubmitSelections selections =
+    sumSelections selections
+        >= Scorebook.minWordLength
+
+
+sumSelections : Selections -> Int
+sumSelections selections =
+    selections
+        |> List.filterMap (Cell.getDie >> Die.getFaceValue)
+        |> List.sum

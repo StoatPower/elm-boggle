@@ -11,10 +11,6 @@ import Pages.Unstarted
 import UI.HeaderView as HeaderView
 
 
-
--- import UI.Palette exposing (..)
-
-
 view : Game -> Element Msg
 view game =
     column [ width fill, height fill ]

@@ -89,6 +89,13 @@ getFace (Die _ index config) =
         |> Maybe.map augmentQ
 
 
+getFaceValue : Die -> Maybe Int
+getFaceValue die =
+    die
+        |> getFace
+        |> Maybe.map String.length
+
+
 getId : Die -> DieId
 getId (Die id _ _) =
     id

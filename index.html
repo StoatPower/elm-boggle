@@ -15754,10 +15754,29 @@ var $author$project$UI$BoardView$view = function (board) {
 };
 var $author$project$Message$SubmitWord = {$: 8};
 var $author$project$Game$Scorebook$minWordLength = 3;
+var $author$project$Game$Die$getFaceValue = function (die) {
+	return A2(
+		$elm$core$Maybe$map,
+		$elm$core$String$length,
+		$author$project$Game$Die$getFace(die));
+};
+var $elm$core$List$sum = function (numbers) {
+	return A3($elm$core$List$foldl, $elm$core$Basics$add, 0, numbers);
+};
+var $author$project$UI$SelectionsView$sumSelections = function (selections) {
+	return $elm$core$List$sum(
+		A2(
+			$elm$core$List$filterMap,
+			A2($elm$core$Basics$composeR, $author$project$Game$Cell$getDie, $author$project$Game$Die$getFaceValue),
+			selections));
+};
+var $author$project$UI$SelectionsView$canSubmitSelections = function (selections) {
+	return _Utils_cmp(
+		$author$project$UI$SelectionsView$sumSelections(selections),
+		$author$project$Game$Scorebook$minWordLength) > -1;
+};
 var $author$project$UI$SelectionsView$submitWordBtn = function (selections) {
-	var _v0 = (_Utils_cmp(
-		$elm$core$List$length(selections),
-		$author$project$Game$Scorebook$minWordLength) > -1) ? _Utils_Tuple2(
+	var _v0 = $author$project$UI$SelectionsView$canSubmitSelections(selections) ? _Utils_Tuple2(
 		_List_fromArray(
 			[
 				$mdgriffith$elm_ui$Element$Font$color($author$project$UI$Palette$atlantis)
