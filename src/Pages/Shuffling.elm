@@ -21,6 +21,7 @@ view board submissions =
             ]
           <|
             text " "
-        , BoardView.view board
-        , SubmissionsView.view submissions
+        , el [ onLeft <| SubmissionsView.view submissions ] <|
+            BoardView.view board
+        , el [ height <| px 32, width fill ] none
         ]
